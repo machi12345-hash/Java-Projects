@@ -1,0 +1,547 @@
+import streamlit as st
+import os
+from langchain.prompts import ChatPromptTemplate
+from streamlit_agraph import agraph, Node, Edge, Config
+import time
+import llm_service as llmService
+import utils
+import db_service as dbService
+
+# Sprint 1
+# First: take prompt and scan for any file name like "Give me the dependancies for BF4000M1" folder should be scanned for BF4000M1.csv
+# Second: If file was found read first 2 lines and ask LLM first question with Colum prompt
+# Third: Take response and ask third question to build py script
+# Forth: save scrip and execute the script automatically
+
+# Sprint 2
+# Dependency graph
+# First take prompt and scan for any possible application name like "BF4000M1".
+# Second run query against possible names, on first response with data stop quering and save data as csv
+# Third run python script to present user with a image of dependancies including programs
+
+
+# Next steps 04/11/2024
+# Ask for graph
+# generate graph
+# for each job get a list of programs
+# document the list of programs, translate all commnets
+# Get chat history to work, currently all history is not being sent to the model
+
+
+# Code documentation
+# First take prompt and identify possible program file name.
+# Second search for the file names, stop on first one found
+# Third give the file as context to docuemnt
+# Forth provide the docuemnt to the user
+
+# Idea: use this prompt to get some insights of the graph:
+# Given the context form a neo4j database, the data describes the dependencies of and application, the jobs it uses and the programs the jobs call. What can you tell me about the data?
+#
+# context: {the response form the neo4j query}
+#
+
+def render_graph(nodes, edges):
+    # Create a container for filters
+    filter_container = st.container()
+
+    # Create a container for the graph
+    graph_container = st.container()
+
+    with filter_container:
+        cols = st.columns(3)
+        applications = cols[0].checkbox('Show Applications', value=True, key='app_filter')
+        jobs = cols[1].checkbox('Show Jobs', value=True, key='job_filter')
+        programs = cols[2].checkbox('Show Programs', value=True, key='prog_filter')
+
+    filtered_nodes = [
+        node for node in nodes
+        if (node.group == 'application' and applications) or
+           (node.group == 'job' and jobs) or
+           (node.group == 'program' and programs)
+    ]
+
+    visible_node_ids = {node.id for node in filtered_nodes}
+    filtered_edges = [
+        edge for edge in edges
+        if edge.source in visible_node_ids and edge.to in visible_node_ids
+    ]
+
+    config = Config(
+        height=1000,
+        width=1200,
+        nodeHighlightBehavior=True,
+        highlightColor="#F7A7A6",
+        directed=True,
+        collapsible=True,
+        physics=False,
+        groups={
+            'application': {'color': 'grey', 'shape': 'dot', 'size': 30},
+            'program': {'color': 'aqua', 'shape': 'dot', 'size': 20},
+            'job': {'color': 'lime', 'shape': 'dot', 'size': 25}
+        },
+        layout={
+            'improvedLayout': True,
+            'clusterThreshold': 150,
+            'hierarchical': {
+                'enabled': True,
+                'levelSeparation': 250,
+                'nodeSpacing': 200,
+                'direction': 'LR',
+                'sortMethod': 'directed',
+                'shakeTowards': 'roots'
+            },
+            'zoom': 1,
+            'randomSeed': 42
+        }
+    )
+
+    with graph_container:
+        agraph(nodes=filtered_nodes, edges=filtered_edges, config=config)
+
+    st.markdown(
+        """
+        <style>
+        [data-testid="stCheckbox"] {
+            background-color: white;
+            padding: 5px;
+            border-radius: 4px;
+        }        
+        .appview-container {
+        max-width: 95% !important;
+        max-height: 95% !important;
+        }
+        .main > div {
+        max-width: 95% !important;
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+BASE_PROMPT_TEMPLATE = """
+You are a skilled technical writer tasked with creating comprehensive documentation for the provided code. Your primary goal is to produce documentation that is clear, concise, and easily understandable, even for non-technical individuals with little to no prior knowledge of the subject matter.
+
+The documentation should follow this well-structured format:
+
+1. Summary of the Program:
+   - Provide a simple, high-level overview of the program's purpose and functionality, using plain language and avoiding technical jargon.
+   - Use relatable analogies, real-world examples, or familiar scenarios to aid understanding for non-technical readers.
+   - Highlight the key benefits or practical applications of the program in a way that is easily comprehensible.
+
+2. Input:
+   - Files: List and explain the input files used by the program in simple terms, using analogies or examples to help non-technical readers understand their purpose.
+   - Data: Explain the input data or information the program uses, avoiding technical terms and using plain language and examples.
+
+3. Output:
+   - Files: List and explain the output files generated by the program in simple terms, using analogies or examples to help non-technical readers understand their purpose.
+   - Data: Explain the output data or information the program produces, avoiding technical terms and using plain language and examples.
+
+4. Program Flow:
+   - Provide a high-level, step-by-step explanation of how the program works, using plain language and real-world analogies or examples.
+   - Break down complex processes into smaller, more digestible chunks for better understanding.
+   - Use visual aids, such as diagrams or flowcharts, to illustrate the program's flow or structure.
+
+5. Remarks and Comments:
+   - Explain the purpose and context of any remarks or comments within the program code, using plain English and avoiding direct translations of technical terms.
+   - Provide examples or scenarios to help non-technical readers understand the context and importance of these remarks.
+
+6. Module Classification:
+   - Categorize the different modules or sections of the program based on their functionality, such as data processing, calculations, or user interface.
+   - Provide a brief, non-technical explanation of each category and how it relates to the overall program, using examples or analogies to aid understanding.
+
+Throughout the documentation, use clear and concise language, avoid technical jargon, and provide relatable examples or analogies to aid understanding for non-technical readers. Ensure that the documentation is well-structured, with clear sections and headings, and flows logically from one topic to another. Incorporate visual aids, such as diagrams, flowcharts, or screenshots, where appropriate to enhance comprehension.
+
+{context}
+
+Instructions:
+Follow the specified structure and provide comprehensive, well-explained documentation for each section, ensuring that the content is easily understandable for non-technical audiences. Use simple language, real-world examples, visual aids, and analogies to enhance comprehension. Prioritize clarity and accessibility for readers with little to no technical background.
+"""
+
+SUMARRY_PROMMPT_TEMPLATE = """
+Based on the following summaries for each code chunk, create a comprehensive and well-structured final documentation for the entire program, following the specified format:
+
+1. Summary of the Program
+2. Input
+   - Files
+   - Data
+3. Output
+   - Files
+   - Data
+4. Program Flow
+5. Remarks and Comments
+6. Module Classification
+
+Ensure that the final documentation is easy to read and understand, with clear explanations, examples, visual aids, and analogies that cater to non-technical audiences. Use plain language, avoid technical jargon, and provide relatable scenarios to aid comprehension.
+
+The final documentation should be a comprehensive, well-structured, and cohesive document that covers all aspects of the program in a manner that is accessible to both technical and non-technical readers.
+
+{summaries}
+"""
+
+FILENAME_PROMPT_TEMPLATE = """
+Given the following question, use the question as context, do not answer the question, only use it as context. Break down the question to identify possible key words that could identify a possible file name. 
+
+Only give the key words in a comma seperated list.
+
+Question to be used as context:
+
+"{context}"
+"""
+
+if 'nodes' not in st.session_state:
+    st.session_state['nodes'] = []
+
+if 'edges' not in st.session_state:
+    st.session_state['edges'] = []
+
+if 'chat_history' not in st.session_state:
+    st.session_state['chat_history'] = [{
+        "role": "system",
+        "content": "You are a software developer, helping humans with their code related questions."
+    }]
+
+if 'auth_token' not in st.session_state:
+    st.session_state['auth_token'] = ""
+
+if 'start_time' not in st.session_state:
+    st.session_state['start_time'] = time.time()
+
+if 'expires_in' not in st.session_state:
+    st.session_state['expires_in'] = 0
+
+if 'llm_service' not in st.session_state:
+    st.session_state['llm_service'] = llmService.LLMService()
+
+if 'db_service' not in st.session_state:
+    st.session_state['db_service'] = dbService.DBService()
+
+if 'chunk_summaries' not in st.session_state:
+    st.session_state['chunk_summaries'] = []
+
+dependency_types = ["Job dependencies", "Create documentation"]
+image_path = 'cda.png'
+
+if not os.path.isfile(image_path):
+    st.error(f"Image not found: {image_path}")
+else:
+    bin_str = utils.get_base64_of_bin_file(image_path)
+    background_image = f"""
+    <style>    
+        [data-testid="stAppViewContainer"] > 
+        .main 
+        {{        background-image: url('data:image/png;base64,{bin_str}'); 
+            background-size: 100vw 100vh;  
+        
+            /* This sets the size to cover 100% of the viewport width and height */
+           
+        }}    
+    </style>    
+    """
+    st.markdown("<h1 style='color:white;'>COBOL Dependency Analyzer</h1>", unsafe_allow_html=True)
+    st.markdown(background_image, unsafe_allow_html=True)
+
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+
+    if 'chat_placeholder' not in st.session_state:
+        st.session_state.chat_placeholder = st.empty()
+
+    with st.session_state.chat_placeholder:
+        for message in st.session_state.messages:
+            st.chat_message(message['role']).markdown(message['content'])
+
+
+
+    prompt = st.chat_input('Pass Your Prompt here')
+
+    st.markdown(
+        """
+        <style>
+        .stSelectbox label {
+            color: white;
+            
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    selected_dependency = st.selectbox("Select type", dependency_types)
+
+    st.markdown(
+        """
+        <style>
+        .stFileUploader label {
+            color: white;
+            
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    # uploaded_file = st.file_uploader("Choose a file")
+
+    # if uploaded_file is not None:
+    #     save_uploaded_file(uploaded_file, './input')
+    #     st.success(f"File {uploaded_file.name} saved successfully!")
+
+    if st.session_state['nodes']:
+        render_graph(st.session_state['nodes'], st.session_state['edges'])
+
+if prompt:
+    llm_response = ""
+    llm_chat_response = ""
+    fileName = ""  # name of the file
+
+    if selected_dependency == "Create documentation":
+        st.chat_message('user').markdown(prompt)
+        st.session_state.messages.append({'role': 'user', 'content': prompt})
+
+        # clear output folder
+        utils.delete_all_files_in_directory("./src/output/")
+
+        # Get file name
+        prompt_template = ChatPromptTemplate.from_template(FILENAME_PROMPT_TEMPLATE)
+        new_prompt = prompt_template.format(context=prompt)
+        st.session_state['chat_history'].append({"role": "user", "content": new_prompt})
+        # st.session_state['chat_history'] = st.session_state['chat_history'][-6:]
+        st.session_state['chat_history'] = st.session_state['chat_history'][-15:]
+        llm_response = st.session_state['llm_service'].query_llm(new_prompt, st.session_state['auth_token'],
+                                                                 st.session_state['chat_history'])
+        st.session_state['chat_history'].append({"role": "assistant", "content": llm_response})
+        program_name = llm_response.split(",")
+
+        for name in program_name:
+            name = name.strip().upper()
+            fileName = name
+            found_file = None
+
+            # find sub programs
+
+            # program_list = st.session_state['db_service'].find_sub_programs(name)
+            # if(program_list):
+            #     for program in program_list:
+            #         for file_name in program[0]:
+            #             search = utils.find_file(file_name)
+            #             if search:
+            #                 found_file = search
+            #                 print(found_file)
+            #
+            #                 # if found:
+            #                 with (open(search, 'r') as file):
+            #                     content = file.read()
+            #                     prompt_template = ChatPromptTemplate.from_template(BASE_PROMPT_TEMPLATE)
+            #                     question = "Give documentation in markdown for the file by focusing on these topics if available: General Information, Change Log, Program Structure, Subprograms and Procedures, Error Handling. Translate all comments to English."
+            #                     new_prompt = prompt_template.format(context=content, question=question)
+            #                     st.session_state['chat_history'].append({"role": "user", "content": new_prompt})
+            #                     st.session_state['chat_history'] = st.session_state['chat_history'][-6:]
+            #                     llm_response = st.session_state['llm_service'].query_llm(new_prompt,st.session_state['auth_token'],st.session_state['chat_history'])
+            #                     st.session_state['chat_history'].append({"role": "assistant", "content": llm_response})
+            #
+            #                     document = llm_response.replace('```markdown','').replace('```','')
+            #                     file_path = f'./output/{program}_documentation.md'
+            #                     utils.save_as_markdown(document, file_path)
+
+            found = False
+            # Search for main program,sometimes has the extension .PGM
+            search = utils.find_file(name)
+            # search = utils.find_file('P9ZHTE$')
+
+            if search:
+                found = True
+                found_file = search
+            search = utils.find_file(name + ".PGM")
+            if search:
+                found = True
+                found_file = search
+
+
+            #if found start chunking the file:+
+            if found:
+                all_chunk_summaries = []
+                chunks = utils.file_splitter(found_file)
+                i = 1
+                for chunk in chunks:
+                    if chunk not in st.session_state['chat_history']:
+                        content = chunk
+                        prompt_template = ChatPromptTemplate.from_template(BASE_PROMPT_TEMPLATE)
+                        question = "Provide detailed and well structured documentation for this code chunk in English, following the specified structure if present: Summary of the Program, Input, Output, Called (Sub-) Programs, Variables, Section-wise Program Logic, Remarks Translation, Module Classification. Ensure everything is in plain language, easily understandable for non-technical readers."
+                        new_prompt = prompt_template.format(context=content, question=question)
+                        st.session_state['chat_history'].append({"role": "user", "content": new_prompt})
+                        # st.session_state['chat_history'] = st.session_state['chat_history'][-6:]
+                        st.session_state['chat_history'] = st.session_state['chat_history'][-15:]
+                        llm_response = st.session_state['llm_service'].query_llm(new_prompt, st.session_state['auth_token'],
+                                                                                 st.session_state['chat_history'])
+                        st.session_state['chat_history'].append({"role": "assistant", "content": llm_response})
+                        document = llm_response.replace('```markdown', '').replace('```', '')
+                        st.session_state['chat_history'].append({"role": "assistant", "content": llm_response})
+                        file_path = f'./output/chunk_summary{i}_documentation.md'
+                        i = i + 1
+                        utils.save_as_markdown(document, file_path)
+                        all_chunk_summaries.append(document)
+
+                summary_prompt = ChatPromptTemplate.from_template(SUMARRY_PROMMPT_TEMPLATE)
+                summaries = '\n'.join(all_chunk_summaries)
+                final_prompt = summary_prompt.format(summaries=summaries, question="Provide a consolidated summary.")
+                final_summary = st.session_state['llm_service'].query_llm(final_prompt, st.session_state['auth_token'],
+                                                                          st.session_state['chat_history'])
+                final_summary.replace('```markdown', '').replace('```', '')
+                utils.save_as_markdown(final_summary, f'./output/final_summary_{name}.md')
+                llm_chat_response = final_summary
+                utils.markdown_to_pdf(markdown_content=llm_response.replace('```markdown', '').replace('```', ''), output_file=f"./output/pdf/{fileName}.pdf")
+
+
+    elif selected_dependency == "Chat to code":
+        st.chat_message('user').markdown(prompt)
+        st.session_state.messages.append({'role': 'user', 'content': prompt})
+        st.session_state['chat_history'].append({"role": "user", "content": prompt})
+        st.session_state['chat_history'] = st.session_state['chat_history'][-15:]
+
+        # Get file name
+        prompt_template = ChatPromptTemplate.from_template(FILENAME_PROMPT_TEMPLATE)
+        new_prompt = prompt_template.format(context=prompt)
+        llm_response = st.session_state['llm_service'].query_llm(new_prompt, st.session_state['auth_token'],
+                                                                 st.session_state['chat_history'])
+        st.session_state['chat_history'].append({"role": "assistant", "content": llm_response})
+
+        file_names = llm_response.split(",")
+
+        # Search for the csv of the potential file names
+        found = False
+        found_file = ""
+        file_lines = ""
+
+        for name in file_names:
+            name = name.upper().strip()
+            if name != ("GIVE" or "DOCUMENTATION"):
+                name += ".PGM"
+                search = utils.find_file(name)
+                if search:
+                    found = True
+                    found_file = search
+
+        if found:
+            with open(found_file, 'r') as file:
+                content = file.read()
+                prompt_template = ChatPromptTemplate.from_template(BASE_PROMPT_TEMPLATE)
+                question = "Based on the provided context, provide a detailed analysis of the data in natural language, explaining the relationships between applications, jobs, and programs. Describe the dependencies and any other relevant information that can help understand the structure and functionality of the system."
+                new_prompt = prompt_template.format(context=content, question=question)
+                llm_response = st.session_state['llm_service'].query_llm(new_prompt, st.session_state['auth_token'],
+                                                                         st.session_state['chat_history'])
+                st.session_state['chat_history'].append({"role": "assistant", "content": llm_response})
+
+                cleand_response = llm_response.replace('```markdown', '').replace('```', '')
+
+                file_path = f'./output/{name}.md'
+                utils.save_as_markdown(cleand_response, file_path)
+        # llm_response = found
+
+        # llm_response = query_with_input_file(prompt).replace('```markdown','').replace('```','')
+    # elif selected_dependency == "Test":
+    #
+    #     data = st.session_state['db_service'].program_calls("P4BF638")
+
+        # st.session_state['chat_hisory'].append({"role":"user", "content":"Question: Give documentation for the code"})
+
+        # Test for creatimg chunks and adding chunkds to history
+        # for i in range(1, 5):
+        #     contents = utils.read_file(f'./output/chunked/chunk_{i}.txt')
+        #     st.session_state['chat_history'].append({"role": "user", "content": f"{contents}"})
+        #
+        # st.session_state['chat_history'].append({"role":"user", "content":"Question: Give documentation in markdown for the file, do not show any code snippets and focusing on these topics if available: General Information, Change Log, Program Structure, Subprograms and Procedures, Error Handling. Translate all comments to English."})
+        # llm_response = st.session_state['llm_service'].query_llm("",st.session_state['auth_token'],st.session_state['chat_history'])
+
+    else:
+        st.chat_message('user').markdown(prompt)
+        st.session_state.messages.append({'role': 'user', 'content': prompt})
+
+        # Get file name
+        prompt_template = ChatPromptTemplate.from_template(FILENAME_PROMPT_TEMPLATE)
+        new_prompt = prompt_template.format(context=prompt)
+        st.session_state['chat_history'].append({"role": "user", "content": new_prompt})
+        llm_response = st.session_state['llm_service'].query_llm(new_prompt, st.session_state['auth_token'],
+                                                                 st.session_state['chat_history'])
+        st.session_state['chat_history'].append({"role": "assistant", "content": llm_response})
+
+        file_names = llm_response.split(",")
+
+        # Search for the csv of the potential file names
+        found = False
+        found_file = ""
+        file_lines = ""
+        fname = ''
+        fileName = ''
+
+        for name in file_names:
+            fname = name.upper().strip()
+            if fname != "DEPENDENCIES":
+                if st.session_state['db_service'].find_and_populate_from_xinfo_data(name, selected_dependency):
+                    found = True
+                    found_file = name.strip() + ".csv"
+                    fileName = fname
+
+
+        if found and fileName != '':
+            results = st.session_state['db_service'].execute_ne04j_query(fileName)
+            node_ids = set()
+
+            st.session_state['nodes'] = []
+            st.session_state['edges'] = []
+
+            for result in results['results']:
+                for node in result['nodes']:
+                    node_id = node['~id']
+                    if node_id not in node_ids:
+                        node_ids.add(node_id)
+                        label = node['~properties']['program_name'] if 'program' in node['~labels'] else \
+                            node['~properties']['application_name'] if 'application' in node['~labels'] else \
+                                node['~properties']['job_name'] if 'job' in node['~labels'] else \
+                                    print(node)
+                        if 'application' in node['~labels']:
+                            st.session_state['nodes'].append(Node(id=node_id, label=label, group='application'))
+                        elif 'program' in node['~labels']:
+                            st.session_state['nodes'].append(Node(id=node_id, label=label, group='program'))
+                        else:
+                            st.session_state['nodes'].append(Node(id=node_id, label=label, group='job'))
+
+                for relationship in result['relationships']:
+                    st.session_state['edges'].append(
+                        Edge(source=relationship['~start'], target=relationship['~end'], label=relationship['~type']))
+
+            if st.session_state['nodes']:
+                render_graph(st.session_state['nodes'], st.session_state['edges'])
+
+    st.markdown(
+        """
+            <style>
+            .stChatMessage {
+                background-color: white;
+            }
+            </style>
+            """,
+        unsafe_allow_html=True
+    )
+    st.chat_message('assistant').markdown(llm_chat_response)
+    st.session_state.messages.append({'role': 'assistant', 'content': llm_chat_response})
+
+    if selected_dependency == "Create documentation" and llm_response != '':
+        with open(f"./output/pdf/{fileName}.pdf", "rb") as file:
+            btn = st.download_button(
+                label="Download PDF",
+                data=file,
+                file_name=f"{fileName}.pdf",
+                mime="text/pdf",
+                
+            )
+    if st.button("Clear"):
+            st.session_state['chat_history'] = [{
+                "role": "system",
+                "content": "You are a software developer, helping humans with their code related questions."
+            }]
+            st.session_state['chunk_summaries'] = []
+            st.session_state.messages = []
+            st.session_state.chat_placeholder.empty()
+            # Clear any other relevant session state variables
+            st.success("Chat history cleared!")
