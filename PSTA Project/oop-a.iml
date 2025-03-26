@@ -1,68 +1,327 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<module type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" inherit-compiler-output="true">
-    <exclude-output />
-    <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
-      <excludeFolder url="file://$MODULE_DIR$/src/CrazyStation" />
-      <excludeFolder url="file://$MODULE_DIR$/src/CrazyStation2" />
-      <excludeFolder url="file://$MODULE_DIR$/src/TheGoldenBucket" />
-      <excludeFolder url="file://$MODULE_DIR$/src/TheGoldenBucket2" />
-    </content>
-    <orderEntry type="inheritedJdk" />
-    <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module-library">
-      <library name="JUnit4">
-        <CLASSES>
-          <root url="jar://$MAVEN_REPOSITORY$/junit/junit/4.12/junit-4.12.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="JUnit5.4">
-        <CLASSES>
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter/5.4.2/junit-jupiter-5.4.2.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-api/5.4.2/junit-jupiter-api-5.4.2.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/apiguardian/apiguardian-api/1.0.0/apiguardian-api-1.0.0.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/opentest4j/opentest4j/1.1.1/opentest4j-1.1.1.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/platform/junit-platform-commons/1.4.2/junit-platform-commons-1.4.2.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-params/5.4.2/junit-jupiter-params-5.4.2.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-engine/5.4.2/junit-jupiter-engine-5.4.2.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/platform/junit-platform-engine/1.4.2/junit-platform-engine-1.4.2.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="JUnit4">
-        <CLASSES>
-          <root url="jar://$MAVEN_REPOSITORY$/junit/junit/4.13.1/junit-4.13.1.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="JUnit5.7.0">
-        <CLASSES>
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter/5.7.0/junit-jupiter-5.7.0.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-api/5.7.0/junit-jupiter-api-5.7.0.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/apiguardian/apiguardian-api/1.1.0/apiguardian-api-1.1.0.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/opentest4j/opentest4j/1.2.0/opentest4j-1.2.0.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/platform/junit-platform-commons/1.7.0/junit-platform-commons-1.7.0.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-params/5.7.0/junit-jupiter-params-5.7.0.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-engine/5.7.0/junit-jupiter-engine-5.7.0.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/junit/platform/junit-platform-engine/1.7.0/junit-platform-engine-1.7.0.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="library" name="simpleflatmapper.sfm.csv" level="project" />
-  </component>
-</module>
+import csv
+import os
+import re
+import shutil
+import glob
+import base64
+import tempfile
+from typing import Text, Optional, Dict, Any, List
+from markdown_pdf import MarkdownPdf, Section
+import datetime
+import PyPDF2
+from io import BytesIO
+
+
+def escape_invalid_chars(s):
+    """Escapes invalid characters in strings"""
+    return re.sub(r'[\x00-\x1F\x7F-\x9F]', lambda m: '\\u{:04x}'.format(ord(m.group(0))), s)
+
+
+def create_csv(name, column_names, result):
+    """Creates a CSV file with the given name, columns, and data"""
+    # Open csv file for writing
+    with open(f'./input/{name}.csv', mode='w', encoding='utf-8', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(column_names)
+        csv_writer.writerows(result)
+
+
+def read_first_lines_from_file(name):
+    """Reads the first two lines from a CSV file"""
+    file_path = "./input/" + name
+    with open(file_path, 'r') as file:
+        reader = csv.reader(file)
+        lines = [next(reader) for _ in range(2)]
+    return lines
+
+
+def delete_all_files_in_directory(directory_path):
+    """Deletes all files in the specified directory"""
+    if os.path.exists(directory_path):
+        for file_name in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, file_name)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+
+
+def save_uploaded_file(uploaded_file, directory_path):
+    """Saves an uploaded file to the specified directory"""
+    delete_all_files_in_directory(directory_path)
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+    file_path = os.path.join(directory_path, uploaded_file.name)
+    with open(file_path, 'wb') as f:
+        shutil.copyfileobj(uploaded_file, f)
+    return file_path
+
+
+def read_files(directory_path):
+    """Reads all files in a directory and returns their contents as a dictionary"""
+    file_contents = {}
+    for file_path in glob.glob(os.path.join(directory_path, '*')):
+        with open(file_path, 'r') as file:
+            content = file.read()
+            file_name = os.path.basename(file_path)
+            file_contents[file_name] = content
+    return file_contents
+
+
+def read_file(file_path):
+    """Reads a file and returns its contents"""
+    with open(file_path, 'r') as file:
+        content = file.read()
+    return content
+
+
+def find_file(file_name):
+    """
+    Finds a file by name in the input directory
+    Enhanced to search more thoroughly and handle case sensitivity
+    """
+    print(f"Looking for file: {file_name}")
+    
+    # First try exact match
+    for root, dirs, files in os.walk('./input/'):
+        print(f"Searching in: {root}")
+        print(f"Files found: {files}")
+        if file_name in files:
+            return os.path.join(root, file_name)
+    
+    # Try with PGM extension if not already included
+    if not file_name.upper().endswith('.PGM'):
+        pgm_name = file_name + '.PGM'
+        for root, dirs, files in os.walk('./input/'):
+            if pgm_name in files:
+                return os.path.join(root, pgm_name)
+    
+    # Try case-insensitive search
+    for root, dirs, files in os.walk('./input/'):
+        for f in files:
+            if f.upper() == file_name.upper() or f.upper() == (file_name + '.PGM').upper():
+                return os.path.join(root, f)
+    
+    return None
+
+
+def save_as_markdown(input_text, file_path):
+    """Saves text as a markdown file"""
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(input_text)
+
+
+def get_base64_of_bin_file(bin_file):
+    """Converts a binary file to a base64 string"""
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+
+def node_exists(node_id, st):
+    """Checks if a node exists in the session state"""
+    for node in st.session_state['nodes']:
+        if node.id == node_id:
+            return True
+    return False
+
+
+def file_splitter(file_path, chunk_size=10000, chunk_overlap=1000):
+    """
+    Basic file splitter function - splits file into chunks based on character count
+    """
+    # Read the file content
+    with open(file_path, "r", errors='ignore') as file:
+        file_content = file.read()
+
+    # Split the file content into chunks with overlap
+    chunks = []
+    start = 0
+    end = chunk_size
+
+    while start < len(file_content):
+        chunk = file_content[start:end]
+        chunks.append(chunk)
+        start += chunk_size - chunk_overlap
+        end = start + chunk_size
+
+    return chunks
+
+
+def intelligent_file_splitter(file_path, max_chunk_size=15000, min_chunk_size=5000):
+    """
+    Advanced file splitter that attempts to split COBOL code more intelligently
+    by respecting procedure and division boundaries where possible
+    """
+    with open(file_path, "r", errors='ignore') as file:
+        file_content = file.read()
+    
+    # Define COBOL structural markers to split on
+    division_markers = [
+        "IDENTIFICATION DIVISION",
+        "ENVIRONMENT DIVISION",
+        "DATA DIVISION",
+        "PROCEDURE DIVISION"
+    ]
+    
+    section_markers = [
+        "CONFIGURATION SECTION",
+        "INPUT-OUTPUT SECTION",
+        "FILE SECTION",
+        "WORKING-STORAGE SECTION",
+        "LINKAGE SECTION"
+    ]
+    
+    # Compile patterns for divisions and sections
+    division_pattern = r'(?i)(\s+|^)(' + '|'.join(division_markers) + r')(\s+|\.)'
+    section_pattern = r'(?i)(\s+|^)(' + '|'.join(section_markers) + r')(\s+|\.)'
+    
+    # Find all division and section boundaries
+    division_matches = list(re.finditer(division_pattern, file_content))
+    section_matches = list(re.finditer(section_pattern, file_content))
+    
+    # Combine all potential split points and sort by position
+    split_points = []
+    
+    # Add division boundaries (highest priority)
+    for match in division_matches:
+        split_points.append((match.start(), 3))  # Higher priority
+    
+    # Add section boundaries (medium priority)
+    for match in section_matches:
+        split_points.append((match.start(), 2))  # Medium priority
+    
+    # Add paragraph boundaries (lowest priority)
+    paragraph_pattern = r'(?i)(\n\s+\S+\s+SECTION\s*\.|\n\s+\d+\-\S+\s*\.)'
+    for match in re.finditer(paragraph_pattern, file_content):
+        split_points.append((match.start(), 1))  # Lower priority
+    
+    # Sort split points by position
+    split_points.sort(key=lambda x: x[0])
+    
+    # Create chunks based on split points
+    chunks = []
+    start_pos = 0
+    
+    # If file is small enough, return it as a single chunk
+    if len(file_content) <= max_chunk_size:
+        return [file_content]
+    
+    # Build chunks
+    for i, (pos, priority) in enumerate(split_points):
+        # Check if we need to split
+        if pos - start_pos >= max_chunk_size:
+            # Find the best split point before the max_chunk_size limit
+            best_split_pos = start_pos
+            best_priority = 0
+            
+            for split_pos, split_priority in split_points:
+                if start_pos < split_pos < start_pos + max_chunk_size:
+                    if split_priority > best_priority or best_split_pos == start_pos:
+                        best_split_pos = split_pos
+                        best_priority = split_priority
+            
+            # If no good split point found, just use max_chunk_size
+            if best_split_pos == start_pos:
+                chunks.append(file_content[start_pos:start_pos + max_chunk_size])
+                start_pos += max_chunk_size
+            else:
+                chunks.append(file_content[start_pos:best_split_pos])
+                start_pos = best_split_pos
+    
+    # Add the final chunk
+    if start_pos < len(file_content):
+        chunks.append(file_content[start_pos:])
+    
+    # Ensure minimum context by adding overlaps
+    final_chunks = []
+    for i, chunk in enumerate(chunks):
+        # Add beginning context from previous chunk if available
+        if i > 0 and len(chunks[i-1]) > 0:
+            overlap_size = min(1000, len(chunks[i-1]))
+            final_chunks.append(chunks[i-1][-overlap_size:] + chunk)
+        else:
+            final_chunks.append(chunk)
+    
+    return final_chunks
+
+
+def markdown_to_pdf(output_file: Text, markdown_content: Optional[Text] = None, file_path: Optional[Text] = None):
+    """Basic markdown to PDF conversion"""
+    if markdown_content is None and file_path is None:
+        raise ValueError("Either markdown_content or file_path must be provided.")
+
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md') as temp_file:
+        if markdown_content is not None:
+            temp_file.write(markdown_content)
+        elif file_path is not None:
+            with open(file_path, 'r') as f:
+                markdown_content = f.read()
+                temp_file.write(markdown_content)
+
+        pdf = MarkdownPdf()
+        pdf.meta["title"] = 'Program Documentation'
+        pdf.add_section(Section(markdown_content, toc=False))
+        pdf.save(output_file)
+
+
+def enhanced_markdown_to_pdf(markdown_content: Text, output_file: Text, metadata: Dict[str, Any] = None):
+    """
+    Enhanced markdown to PDF conversion with better formatting, TOC, and metadata
+    """
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    
+    # Default metadata
+    if metadata is None:
+        metadata = {
+            "title": "Program Documentation",
+            "author": "COBOL Dependency Analyzer",
+            # Change from date to creation_date
+            "creation_date": datetime.datetime.now().strftime("%Y-%m-%d"),
+            "subject": "Technical Documentation"
+        }
+    
+    # Extract TOC items - find all headings
+    toc_pattern = r'^#{1,3}\s+(.+)$'
+    toc_items = re.findall(toc_pattern, markdown_content, re.MULTILINE)
+    
+    # Generate table of contents markdown
+    toc_md = "# Table of Contents\n\n"
+    for item in toc_items:
+        toc_md += f"- {item}\n"
+    
+    # Combine TOC with content
+    full_content = f"{toc_md}\n\n---\n\n{markdown_content}"
+    
+    # Create PDF with custom styling
+    pdf = MarkdownPdf()
+    
+    # Set metadata - only use supported keys
+    # Typical supported keys are: title, author, subject, keywords
+    for key, value in metadata.items():
+        if key != "date" and key != "creation_date":  # Skip date keys
+            pdf.meta[key] = value
+    
+    # Add cover page and TOC
+    cover_content = f"""
+    # {metadata.get('title', 'Program Documentation')}
+    
+    **Generated by**: {metadata.get('author', 'COBOL Dependency Analyzer')}
+    
+    **Date**: {metadata.get('creation_date', datetime.datetime.now().strftime("%Y-%m-%d"))}
+    
+    **Subject**: {metadata.get('subject', 'Technical Documentation')}
+    """
+    
+    pdf.add_section(Section(cover_content, toc=False))
+    pdf.add_section(Section(full_content, toc=True))
+    
+    # Save the PDF
+    pdf.save(output_file)
+    
+    return output_file
