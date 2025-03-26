@@ -9,9 +9,10 @@ import utils
 import db_service as dbService
 from datetime import datetime
 
-# Improved prompt templates for better documentation generation
+
 BASE_PROMPT_TEMPLATE = """
-You are an expert technical documentation specialist tasked with creating comprehensive documentation for COBOL programs that will be read by non-technical stakeholders. Your documentation must be clear, precise, and accessible to readers with limited technical knowledge.
+You are an expert technical documentation specialist tasked with creating comprehensive documentation for COBOL programs that
+ will be read by non-technical stakeholders. Your documentation must be clear, precise, and accessible to readers with limited technical knowledge.
 
 Follow this structured format exactly:
 
@@ -57,7 +58,9 @@ Follow this structured format exactly:
 - Note performance considerations or limitations
 - Document any known issues or special handling requirements
 
-Remember, this documentation is meant for business users who don't understand programming concepts. Use clear, simple language and avoid technical jargon. When technical terms are unavoidable, provide brief explanations. Translate any non-English comments to English.
+Remember, this documentation is meant for business users who don't understand programming concepts. Use clear,
+ simple language and avoid technical jargon. When technical terms are unavoidable, provide brief explanations. 
+ Translate any non-English comments to English.
 
 Analyze this code carefully:
 
@@ -65,7 +68,8 @@ Analyze this code carefully:
 """
 
 SUMMARY_PROMPT_TEMPLATE = """
-You are creating the final comprehensive documentation for a COBOL program based on individual chunk analyses. Your task is to synthesize these analyses into a cohesive, well-organized document following this exact structure:
+You are creating the final comprehensive documentation for a COBOL program based on individual chunk analyses. 
+Your task is to synthesize these analyses into a cohesive, well-organized document following this exact structure:
 
 ## 1. Executive Summary
 - Synthesize a concise overview of the program's primary business function
@@ -479,3 +483,63 @@ def generate_documentation(prompt):
     st.session_state.documentation_generated = True
     
     return cleaned_summary
+
+def main():
+    initialize_session_state()
+    render_header()
+
+    # Add a button to choose between document generation or job dependency analysis
+    analysis_type = st.sidebar.radio("Select Analysis Type", ["Document Generation", "Job Dependency"])
+
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+
+    if 'chat_placeholder' not in st.session_state:
+        st.session_state.chat_placeholder = st.empty()
+
+    with st.session_state.chat_placeholder:
+        for message in st.session_state.messages:
+            st.chat_message(message['role']).markdown(message['content'])
+
+    prompt = st.chat_input('Pass Your Prompt here')
+
+    if prompt:
+        if analysis_type == "Document Generation":
+            cleaned_summary = generate_documentation(prompt)
+            st.chat_message('assistant').markdown(cleaned_summary)
+            st.session_state.messages.append({'role': 'assistant', 'content': cleaned_summary})
+
+            if st.session_state.documentation_generated:
+                with open(f"./output/pdf/{st.session_state.current_program}.pdf", "rb") as file:
+                    btn = st.download_button(
+                        label="Download PDF",
+                        data=file,
+                        file_name=f"{st.session_state.current_program}.pdf",
+                        mime="text/pdf",
+                    )
+
+                st.subheader("Documentation Preview")
+                st.markdown(cleaned_summary)
+        else:
+            # Code for job dependency analysis
+            pass
+
+    if st.button("Clear"):
+        st.session_state['chat_history'] = [{
+            "role": "system",
+            "content": "You are a documentation specialist, transforming COBOL code into clear, business-focused documentation."
+        }]
+        st.session_state['chunk_summaries'] = []
+        st.session_state.messages = []
+        st.session_state.chat_placeholder.empty()
+        st.success("Chat history cleared!")
+
+    if st.session_state.documentation_generated:
+        st.subheader("Dependency Graph")
+        if st.session_state.nodes and st.session_state.edges:
+            render_graph(st.session_state.nodes, st.session_state.edges)
+        else:
+            st.warning("No dependency graph available for the current program.")
+
+if __name__ == "__main__":
+    main()
