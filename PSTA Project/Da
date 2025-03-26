@@ -1,39 +1,481 @@
-👋 Hi everyone!
-I’m Tafara Warren Machiridza, and I’m excited to be part of the Mainframe Migration team
-at BMW!
-🌍 A Bit About Me
-I was born in Zimbabwe but grew up in South Africa, where I spent most of my life. In
-October 2021, I moved to Germany to further my studies, and I’m currently in my final
-semester pursuing a B.Sc. in Applied Artificial Intelligence at TH Rosenheim. My
-academic journey has given me a strong foundation in AI, machine learning, and
-data-driven solutions.
-💼 My Professional Journey
-Before joining BMW, I worked at Allianz as a Working Student in AI, where I contributed to
-several exciting projects, including:
-✅ AI Model Monitoring & Automation – Developed a scalable system for tracking the
-performance of Large Language Models (LLMs) through real-time keyword analysis and
-external API integrations.
-✅ Conversational AI & Chatbots – Designed and implemented a prototype AI chatbot,
-optimizing agent workflows and integrating reusable components for improved user
-interaction.
-✅ Data Optimization & Quality Assurance – Enhanced data validation and system
-configurations, ensuring high accuracy and consistency across AI-driven solutions.
-✅ AI-Driven Insights – Helped refine AI models and analytics to better align with business
-goals and enhance customer experiences.
-This experience sharpened my skills in AI development, automation, and data
-engineering, all of which I’m eager to leverage in the Mainframe Migration team.
-🔧 Skills I Bring to the Team
-I have hands-on experience in:
-🚀 Machine Learning & AI (LLMs, NLP, RAG, AI Chatbots)
-💾 Data Engineering & Automation (Python, SQL, Data Pipelines)
-☁ Cloud & Infrastructure (AWS, Azure, Linux, MLOps)
-💻 Software Development (Java, JavaScript, APIs, System Optimization)
-⚽ Hobbies & Interests
-Outside of work, I’m a big fan of football (both playing & watching), I love jogging, and I’m
-obsessed with billiards—I could play for hours!
-🚀 Looking Ahead
-Joining BMW is an incredible opportunity, and I’m thrilled to be part of a team that’s driving
-innovation. I’m looking forward to learning, growing, and contributing to the success of
-Mainframe Migration. Let’s collaborate, tackle challenges, and make an impact together.
-Feel free to connect with me—whether it’s about AI, data, or even a friendly game of
-billiards! Looking forward to working with all of you
+import streamlit as st
+import os
+import re
+from langchain.prompts import ChatPromptTemplate
+from streamlit_agraph import agraph, Node, Edge, Config
+import time
+import llm_service as llmService
+import utils
+import db_service as dbService
+from datetime import datetime
+
+# Improved prompt templates for better documentation generation
+BASE_PROMPT_TEMPLATE = """
+You are an expert technical documentation specialist tasked with creating comprehensive documentation for COBOL programs that will be read by non-technical stakeholders. Your documentation must be clear, precise, and accessible to readers with limited technical knowledge.
+
+Follow this structured format exactly:
+
+## 1. Executive Summary
+- Provide a brief, high-level overview of the program's purpose and business function (2-3 sentences)
+- Highlight key business benefits and impact (1-2 sentences)
+
+## 2. Program Information
+- Program Name: {program_name}
+- Program Type: (Batch/Online/Subsystem)
+- Last Modified: (Extract from code if available)
+- Primary Business Function: (Brief description)
+
+## 3. Input and Output
+### Input
+- List all input files with descriptions and record layouts
+- Detail key input parameters and their business meaning
+- Explain data sources and dependencies
+
+### Output
+- List all output files with descriptions and record layouts
+- Explain the business significance of key output fields
+- Describe how outputs are used downstream
+
+## 4. Program Flow
+- Provide a clear, step-by-step explanation of the main processing logic
+- Focus on the "what" and "why" rather than technical implementation
+- Identify critical business rules embedded in the code
+- Highlight exception handling for business scenarios
+
+## 5. Called Programs and Dependencies
+- List all subprograms called with their business purpose
+- Identify upstream and downstream dependencies
+- Explain integration points with other systems
+
+## 6. Data Dictionary
+- Define key variables and their business meaning
+- Explain critical calculations and business rules
+- Describe important data transformations
+
+## 7. Technical Notes
+- Highlight any technical considerations important for maintenance
+- Note performance considerations or limitations
+- Document any known issues or special handling requirements
+
+Remember, this documentation is meant for business users who don't understand programming concepts. Use clear, simple language and avoid technical jargon. When technical terms are unavoidable, provide brief explanations. Translate any non-English comments to English.
+
+Analyze this code carefully:
+
+{context}
+"""
+
+SUMMARY_PROMPT_TEMPLATE = """
+You are creating the final comprehensive documentation for a COBOL program based on individual chunk analyses. Your task is to synthesize these analyses into a cohesive, well-organized document following this exact structure:
+
+## 1. Executive Summary
+- Synthesize a concise overview of the program's primary business function
+- Highlight key business benefits and impact
+
+## 2. Program Information
+- Program Name: {program_name}
+- Consolidate program type and metadata from chunk analyses
+- Create a clear, unified statement of the primary business function
+
+## 3. Input and Output
+### Input
+- Create a complete, non-redundant list of all input files, parameters, and data sources
+- Ensure descriptions focus on business significance
+
+### Output
+- Create a complete, non-redundant list of all output files and data
+- Emphasize business impact and downstream usage
+
+## 4. Program Flow
+- Create a unified, logical flow explanation that combines insights from all chunks
+- Focus on business processes rather than technical implementation
+- Highlight critical business rules and decision points
+
+## 5. Called Programs and Dependencies
+- Compile a complete list of called programs and their business purposes
+- Create a cohesive view of system integration points
+
+## 6. Data Dictionary
+- Compile a comprehensive list of business-critical variables and calculations
+- Ensure consistent terminology and explanations
+
+## 7. Technical Notes
+- Consolidate key technical considerations relevant to business stakeholders
+- Include any critical maintenance or performance information
+
+Your documentation must be:
+1. Comprehensive - including information from ALL chunks
+2. Non-redundant - eliminate duplicated information
+3. Consistent - use uniform terminology throughout
+4. Business-focused - emphasize business significance over technical details
+5. Clear and accessible - suitable for non-technical readers
+
+Analyze these chunk summaries carefully and produce the final document:
+
+{summaries}
+"""
+
+# Initialize session state variables
+def initialize_session_state():
+    if 'nodes' not in st.session_state:
+        st.session_state['nodes'] = []
+    
+    if 'edges' not in st.session_state:
+        st.session_state['edges'] = []
+    
+    if 'chat_history' not in st.session_state:
+        st.session_state['chat_history'] = [{
+            "role": "system",
+            "content": "You are a documentation specialist, transforming COBOL code into clear, business-focused documentation."
+        }]
+    
+    if 'auth_token' not in st.session_state:
+        st.session_state['auth_token'] = ""
+    
+    if 'start_time' not in st.session_state:
+        st.session_state['start_time'] = time.time()
+    
+    if 'expires_in' not in st.session_state:
+        st.session_state['expires_in'] = 0
+    
+    if 'llm_service' not in st.session_state:
+        st.session_state['llm_service'] = llmService.LLMService()
+    
+    if 'db_service' not in st.session_state:
+        st.session_state['db_service'] = dbService.DBService()
+    
+    if 'chunk_summaries' not in st.session_state:
+        st.session_state['chunk_summaries'] = []
+    
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+    
+    if 'chat_placeholder' not in st.session_state:
+        st.session_state.chat_placeholder = st.empty()
+    
+    if 'documentation_generated' not in st.session_state:
+        st.session_state.documentation_generated = False
+    
+    if 'current_program' not in st.session_state:
+        st.session_state.current_program = ""
+    
+    if 'progress_bar' not in st.session_state:
+        st.session_state.progress_bar = None
+    
+    if 'progress_status' not in st.session_state:
+        st.session_state.progress_status = None
+
+def render_header():
+    """Render the application header with improved styling"""
+    image_path = 'cda.png'
+    
+    if not os.path.isfile(image_path):
+        st.error(f"Image not found: {image_path}")
+    else:
+        bin_str = utils.get_base64_of_bin_file(image_path)
+        background_image = f"""
+        <style>    
+            [data-testid="stAppViewContainer"] > 
+            .main 
+            {{        background-image: url('data:image/png;base64,{bin_str}'); 
+                background-size: 100vw 100vh;  
+            }}
+            
+            .title {{
+                text-align: center;
+                padding: 10px;
+                color: white;
+                text-shadow: 2px 2px 4px #000000;
+                font-size: 2.5em;
+            }}
+            
+            .subtitle {{
+                text-align: center;
+                color: white;
+                margin-bottom: 30px;
+            }}
+            
+            /* Styling for chat messages */
+            .stChatMessage {{
+                background-color: rgba(255, 255, 255, 0.9);
+                border-radius: 10px;
+                margin-bottom: 10px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }}
+            
+            /* Styling for buttons */
+            .stButton > button {{
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                transition-duration: 0.4s;
+                cursor: pointer;
+                border-radius: 5px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            }}
+            
+            .stButton > button:hover {{
+                background-color: #45a049;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            }}
+            
+            /* Custom styling for download button */
+            .download-btn {{
+                background-color: #2196F3;
+                color: white;
+                padding: 10px 15px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                margin-top: 10px;
+                transition: background-color 0.3s;
+                display: block;
+                width: 100%;
+                text-align: center;
+            }}
+            
+            .download-btn:hover {{
+                background-color: #0b7dda;
+            }}
+        </style>    
+        """
+        st.markdown(background_image, unsafe_allow_html=True)
+        st.markdown("<div class='title'>COBOL Dependency Analyzer</div>", unsafe_allow_html=True)
+        st.markdown("<div class='subtitle'>Transforming Legacy Code into Business Knowledge</div>", unsafe_allow_html=True)
+
+def render_graph(nodes, edges):
+    """
+    Original render_graph function to maintain dependency graph functionality
+    """
+    # Create a container for filters
+    filter_container = st.container()
+
+    # Create a container for the graph
+    graph_container = st.container()
+
+    with filter_container:
+        cols = st.columns(3)
+        applications = cols[0].checkbox('Show Applications', value=True, key='app_filter')
+        jobs = cols[1].checkbox('Show Jobs', value=True, key='job_filter')
+        programs = cols[2].checkbox('Show Programs', value=True, key='prog_filter')
+
+    filtered_nodes = [
+        node for node in nodes
+        if (node.group == 'application' and applications) or
+           (node.group == 'job' and jobs) or
+           (node.group == 'program' and programs)
+    ]
+
+    visible_node_ids = {node.id for node in filtered_nodes}
+    filtered_edges = [
+        edge for edge in edges
+        if edge.source in visible_node_ids and edge.to in visible_node_ids
+    ]
+
+    config = Config(
+        height=1000,
+        width=1200,
+        nodeHighlightBehavior=True,
+        highlightColor="#F7A7A6",
+        directed=True,
+        collapsible=True,
+        physics=False,
+        groups={
+            'application': {'color': 'grey', 'shape': 'dot', 'size': 30},
+            'program': {'color': 'aqua', 'shape': 'dot', 'size': 20},
+            'job': {'color': 'lime', 'shape': 'dot', 'size': 25}
+        },
+        layout={
+            'improvedLayout': True,
+            'clusterThreshold': 150,
+            'hierarchical': {
+                'enabled': True,
+                'levelSeparation': 250,
+                'nodeSpacing': 200,
+                'direction': 'LR',
+                'sortMethod': 'directed',
+                'shakeTowards': 'roots'
+            },
+            'zoom': 1,
+            'randomSeed': 42
+        }
+    )
+
+    with graph_container:
+        agraph(nodes=filtered_nodes, edges=filtered_edges, config=config)
+
+    st.markdown(
+        """
+        <style>
+        [data-testid="stCheckbox"] {
+            background-color: white;
+            padding: 5px;
+            border-radius: 4px;
+        }        
+        .appview-container {
+        max-width: 95% !important;
+        max-height: 95% !important;
+        }
+        .main > div {
+        max-width: 95% !important;
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+def extract_program_name_from_prompt(prompt):
+    """
+    Extract program name from user prompt if explicitly mentioned
+    Returns the program name or None if not found
+    """
+    # Pattern to match common ways users might specify a program name
+    patterns = [
+        r"for\s+program\s+([A-Za-z0-9_\-\.]+)",  # "for program XYZ123"
+        r"for\s+([A-Za-z0-9_\-\.]+)(?:\s|$|\.)",  # "for XYZ123" or "for XYZ123."
+        r"documentation\s+for\s+([A-Za-z0-9_\-\.]+)",  # "documentation for XYZ123"
+        r"document\s+([A-Za-z0-9_\-\.]+)",  # "document XYZ123"
+        r"analyze\s+([A-Za-z0-9_\-\.]+)",  # "analyze XYZ123"
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, prompt, re.IGNORECASE)
+        if match:
+            return match.group(1).strip().upper()
+    
+    return None
+
+def generate_documentation(prompt):
+    """
+    Enhanced documentation generation function with direct program name extraction
+    """
+    # Clear output folder
+    utils.delete_all_files_in_directory("./src/output/")
+    
+    # Initialize progress tracking
+    st.session_state.progress_bar = st.progress(0)
+    st.session_state.progress_status = st.empty()
+    
+    st.session_state.progress_status.info("🔍 Analyzing your request...")
+    
+    # Try to extract program name directly from the prompt
+    program_name = extract_program_name_from_prompt(prompt)
+    
+    if program_name:
+        st.session_state.current_program = program_name
+        st.session_state.progress_bar.progress(15)
+        st.session_state.progress_status.info(f"🔍 Searching for program file: {program_name}...")
+    else:
+        st.session_state.progress_status.error("❌ Could not identify a program name in your request. Please specify the program name more clearly.")
+        st.session_state.progress_bar.progress(100)
+        return "I couldn't identify a specific program name in your request. Please try again with a clearer program name, for example: 'Generate documentation for PAYROLL01'"
+    
+    # Search for main program file
+    search = utils.find_file(program_name)
+    if search:
+        found = True
+        found_file = search
+    else:
+        # Try with PGM extension
+        search = utils.find_file(program_name + ".PGM")
+        if search:
+            found = True
+            found_file = search
+        else:
+            st.session_state.progress_status.error(f"❌ Program file '{program_name}' not found. Please check the program name.")
+            st.session_state.progress_bar.progress(100)
+            return f"Sorry, I couldn't find the program file '{program_name}'. Please check the program name and try again."
+    
+    st.session_state.progress_bar.progress(25)
+    st.session_state.progress_status.info(f"📋 Found program file: {st.session_state.current_program}. Beginning analysis...")
+    
+    # Process program with intelligent chunking
+    all_chunk_summaries = []
+    chunks = utils.intelligent_file_splitter(found_file)
+    total_chunks = len(chunks)
+    
+    for i, chunk in enumerate(chunks):
+        progress = 25 + int((i / total_chunks) * 50)  # 25% to 75% of progress bar
+        st.session_state.progress_bar.progress(progress)
+        st.session_state.progress_status.info(f"🔍 Analyzing chunk {i+1} of {total_chunks}...")
+        
+        content = chunk
+        prompt_template = ChatPromptTemplate.from_template(BASE_PROMPT_TEMPLATE)
+        new_prompt = prompt_template.format(
+            context=content, 
+            program_name=st.session_state.current_program
+        )
+        
+        st.session_state['chat_history'].append({"role": "user", "content": new_prompt})
+        st.session_state['chat_history'] = st.session_state['chat_history'][-15:]
+        
+        llm_response = st.session_state['llm_service'].query_llm(
+            new_prompt, 
+            st.session_state['auth_token'],
+            st.session_state['chat_history']
+        )
+        
+        st.session_state['chat_history'].append({"role": "assistant", "content": llm_response})
+        document = llm_response.replace('```markdown', '').replace('```', '')
+        
+        # Store chunk summary
+        file_path = f'./output/chunk_summary{i+1}_documentation.md'
+        utils.save_as_markdown(document, file_path)
+        all_chunk_summaries.append(document)
+    
+    st.session_state.progress_bar.progress(75)
+    st.session_state.progress_status.info("🔄 Consolidating analysis into final documentation...")
+    
+    # Generate consolidated summary
+    summary_prompt = ChatPromptTemplate.from_template(SUMMARY_PROMPT_TEMPLATE)
+    summaries = '\n'.join(all_chunk_summaries)
+    final_prompt = summary_prompt.format(
+        summaries=summaries, 
+        program_name=st.session_state.current_program
+    )
+    
+    final_summary = st.session_state['llm_service'].query_llm(
+        final_prompt, 
+        st.session_state['auth_token'],
+        st.session_state['chat_history']
+    )
+    
+    cleaned_summary = final_summary.replace('```markdown', '').replace('```', '')
+    
+    st.session_state.progress_bar.progress(90)
+    st.session_state.progress_status.info("📝 Generating final documentation files...")
+    
+    # Save the final documentation
+    utils.save_as_markdown(cleaned_summary, f'./output/final_summary_{st.session_state.current_program}.md')
+    
+    # Generate PDF with enhanced formatting and structure
+    timestamp = datetime.now().strftime("%Y-%m-%d")
+    metadata = {
+        "title": f"Technical Documentation: {st.session_state.current_program}",
+        "author": "COBOL Dependency Analyzer",
+        "date": timestamp,
+        "subject": "Program Documentation"
+    }
+    
+    pdf_path = f"./output/pdf/{st.session_state.current_program}.pdf"
+    utils.enhanced_markdown_to_pdf(
+        markdown_content=cleaned_summary, 
+        output_file=pdf_path,
+        metadata=metadata
+    )
+    
+    st.session_state.progress_bar.progress(100)
+    st.session_state.progress_status.success("✅ Documentation successfully generated!")
+    
+    # Set session state to indicate documentation has been generated
+    st.session_state.documentation_generated = True
+    
+    return cleaned_summary
