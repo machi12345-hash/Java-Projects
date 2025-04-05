@@ -1,0 +1,444 @@
+1/*** P4BF637 *** SELEKTION DER RPK-SAETZE FUER VERDICHTUNG (EPD)    */ 00010010
+ /*MA*****************************************************************/ 00020000
+ /*                   M O D U L K O P F                              */ 00030000
+ /********************************************************************/ 00040000
+ /*05 ABTEILUNG            : FC-42                                   */ 00050000
+ /*                                                                  */ 00060000
+ /*10 PROJEKT              : PRODUKTIONSFLUSSRECHNUNG                */ 00070000
+ /*                                                                  */ 00080000
+ /*15 TEILPROJEKT          : $$                                      */ 00090000
+ /*                                                                  */ 00100000
+ /*20 MODULNAME            : P4BF637                                 */ 00110000
+ /*                                                                  */ 00120000
+ /*25 MODULVERWENDBARKEIT  : PL/1 / BATCH                            */ 00130000
+ /*                                                                  */ 00140000
+ /*                                                                  */ 00150000
+ /*30 MODULTYP- / INHALT   : HAUPTMODUL                              */ 00160000
+ /*                                                                  */ 00170000
+ /*35 ERSTELLT AM          : 16.04.1997                              */ 00180000
+ /*                                                                  */ 00190000
+ /*40 PROGRAMMIERER        : C. FRANK                                */ 00200000
+ /*                                                                  */ 00210000
+ /*50 AUFTRAGGEBER         : FC-12                                   */ 00220000
+ /*                                                                  */ 00230000
+ /*60 KURZBESCHREIBUNG     : SELEKTION DER RPK-SAETZE FUER EINE      */ 00240010
+ /*                          VERDICHTUNG VOR DER EPD-ABSCHOEPFUNG    */ 00270010
+ /*                                                                  */ 00291008
+ /*VA================================================================*/ 00300000
+ /*            A E N D E R U N G S N A C H W E I S                   */ 00310000
+ /*==================================================================*/ 00320000
+ /* AEND.! AEND.    ! GEAENDERT ! GRUND / AUFTRAG                    */ 00330000
+ /* NR.  ! DATUM    ! NAME      !                                    */ 00340000
+ /*==================================================================*/ 00350000
+ /* V01  ! 16.04.97 ! C. FRANK  ! ERSTERSTELLUNG                     */ 00360000
+ /* V02  ! 28.03.00 ! MSG       ! VERLAENGERUNG BFBEBU AUF 800       */ 00370014
+ /* V03  ! 12.01.06 ! PROCON/WS ! KONTROLLSAETZT BS 80 AUF EIGENE    */ 00380018
+ /*      !          !           ! DATEI                              */ 00390015
+ /* V04  ! 09.08.06 ! PROCON/WS ! AENDERUNGEN WEGEN ENTERPRISE COMP. */ 00400018
+ /* V05  ! 12.08.08 ! PROCON/WS ! BS/BG 90/0 90/1 AUCH ZUR VERDICHTG */ 00410019
+ /*VE================================================================*/ 00480000
+ /*ME*****************************************************************/ 00490000
+1P4BF637:  PROC OPTIONS (MAIN) REORDER;                                 00500000
+                                                                        00510000
+ %DCL   $VERSION   CHAR;                                                00520000
+ %$VERSION = '''' !! 'P4BF637 VERSION VOM ' !! COMPILETIME !! '''';     00530000
+ DCL   P4BF637_VERSION    CHAR(40)  STATIC  INIT                        00540000
+ /*-----------------------------------------------*/                    00550000
+     ($VERSION);                                                        00560000
+ /*-----------------------------------------------*/                    00570000
+                                                                        00580000
+1/*********************************************************************/00590000
+ /*                                                                   */00600000
+ /*             F I L E        D E K L A R A T I O N                  */00610000
+ /*                                                                   */00620000
+ /*********************************************************************/00630000
+                                                                        00640000
+ DCL     EINALL   FILE RECORD SEQL INPUT       /* EINGABE-DATEI       */00650000
+                  ENV(FB RECSIZE(800) TOTAL);  /*                 V02 */00660014
+                                                                        00670000
+ DCL     AUSRPK   FILE RECORD SEQL OUTPUT      /* AUSGABE-DATEI       */00680000
+                  ENV(FB RECSIZE(800) TOTAL);  /* F. VERDICHTUNG  V02 */00690014
+                                                                        00710000
+ DCL     AUSREST  FILE RECORD SEQL OUTPUT      /* AUSGABE-DATEI       */00720000
+                  ENV(FB RECSIZE(800) TOTAL);  /* REST            V02 */00730014
+                                                                        00740000
+ DCL     AUSKKMB  FILE RECORD SEQL OUTPUT      /* AUSGABE-DATEI       */00741015
+                  ENV(FB RECSIZE(800) TOTAL);  /* KONTR. KOSTL. MAT.  */00742015
+                                               /* BEISTELLUNGEN   V03 */00742115
+                                                                        00743015
+ DCL     LISTE    FILE RECORD SEQL OUTPUT      /* DRUCKAUSGABE        */00750000
+                  ENV(FB RECSIZE(133) CTLASA TOTAL);                    00760000
+1                                                                       00780000
+ /*-------------------------------------------------------------------*/00790000
+ /*      SATZSTRUKTUREN                                               */00800000
+ /*-------------------------------------------------------------------*/00810000
+1DCL 1 BFBEBU,                                                          00820003
+         % INCLUDE BFBEBU;;                                             00850000
+1/*********************************************************************/00880000
+ /*                                                                   */00890000
+ /*         DEFINITIONEN ZUM DRUCK DES PROTOKOLLS                     */00900000
+ /*                                                                   */00910000
+ /*********************************************************************/00920000
+ DCL     DBER         CHAR(133) INIT (' ');  /* DRUCKBEREICH          */00940000
+ DCL     DBERX        CHAR(133) INIT (' ');  /* DRUCKBEREICH          */00950000
+ DCL     DBER_LOESCH  CHAR(133) INIT ('');                              00960000
+                                                                        00970000
+ DCL  1  PRINT  DEF(DBER),                                              00980000
+       2 DASA        CHAR(001),                                         00990000
+       2 DSATZ       CHAR(132);                                         01000000
+                                                                        01010000
+ DCL  1  ZEILE  DEF(DBER),                                              01020000
+       2 ASA         CHAR(001),                                         01030000
+       2 TEXT        CHAR(132);                                         01040000
+                                                                        01050000
+                                                                        01060000
+ DCL 1  DRUCKZEILE BASED (ADDR(DBER)),                                  01070000
+      2 ASA        CHAR(001),                                           01080000
+      2 SPACE1     CHAR(009),                                           01090000
+      2 TEXT1      CHAR(123);                                           01100000
+                                                                        01110000
+ DCL 1  TEXT_NEU BASED(ADDR(DBER)),                                     01120000
+      2 ASA        CHAR(001),                                           01130000
+      2 SPACE1     CHAR(009),                                           01140000
+      2 TEXT11     CHAR(045),                                           01150000
+      2 ZAEHLER    PIC 'ZZZZZZZZ9',                                     01160000
+      2 SPACE2     CHAR(069);                                           01170000
+1                                                                       01180000
+ DCL  1  UEB1_L,                                     /* 1. ZEILE */     01190000
+       2(UEB1ASA    CHAR(1)      INIT    ('1'),                         01200000
+         UEB3       CHAR(8)      INIT    ('PGNR.:'),                    01210000
+         UEBPGNR    CHAR(7)      INIT    (' '),                         01220000
+         UEB2       CHAR(13)     INIT    (' '),                         01230000
+         UEB1TXT1   CHAR(77)     INIT    (' '),                         01240000
+         UEB16      CHAR(11)     INIT    (' '),                         01250000
+         UEB17      CHAR(8)      INIT    ('DATUM'),                     01260000
+         UEBDAT     CHAR(8)      INIT    (' '));                        01270000
+ DCL     LUEB1      CHAR (133)   DEF     UEB1_L;                        01280000
+ UEB1_L.UEB1TXT1   = '                     PRODUKTIONSFLUSSRECHNUNG '   01290000
+                  !! '                             ';                   01300000
+                                                                        01310000
+ DCL  1  UEB2_L,                                     /* 2. ZEILE */     01320000
+       2(UEB2ASA    CHAR(1)      INIT    (' '),                         01330000
+         UEB1WERK   CHAR(15)     INIT    ('**** B M W ****'),           01340000
+         UEB23      CHAR(13)     INIT    (' '),                         01350000
+         UEB1TXT2   CHAR(77)     INIT    (' '),                         01360000
+         UEB24      CHAR(11)     INIT    (' '),                         01370000
+         UEB25      CHAR(8)      INIT    ('ZEIT :'),                    01380000
+         UEBZEIT    CHAR(8)      INIT    (' '));                        01390000
+ DCL     LUEB2      CHAR (133)   DEF     UEB2_L;                        01400000
+ UEB2_L.UEB1TXT2  =  '------------------------------------------------' 01410000
+                  !! '-----------------------------';                   01420000
+                                                                        01430000
+ DCL  1  UEB3_L,                                     /* 3. ZEILE */     01440000
+       2(UEB3ASA    CHAR(1)      INIT    (' '),                         01450000
+         UEB32      CHAR(7)      INIT    ('ABT.:'),                     01460000
+         UEB1ABT    CHAR(8)      INIT    (' '),                         01470000
+         UEB33      CHAR(13)     INIT    (' '),                         01480000
+         UEB1TXT3   CHAR(77)     INIT    (' '),                         01490000
+         UEB34      CHAR(11)     INIT    (' '),                         01500000
+         UEB35      CHAR(8)      INIT    ('SEITE:'),                    01510000
+         UEBPAGE    PIC '(7)Z9');                                       01520000
+ DCL     LUEB3      CHAR (133)   DEF     UEB3_L;                        01530000
+ UEB3_L.UEB1TXT3 =                                                      01540000
+ 'SELEKTION DER RPK-SAETZE FUER VERDICHTUNG ZUR EPD-ABSP. ';            01550010
+                                                                        01560000
+0/*-------------------------------------------------------------------*/01570000
+ /********************************************************************/ 01571018
+ /*   UPRO P9TCTDY                                                   */ 01572018
+ /********************************************************************/ 01573018
+ %INCLUDE $DDNDSNR;                                             /*V04*/ 01574018
+ DCL DSNNAME   CHAR(44) VAR    INIT('');                        /*V04*/ 01575018
+ DCL DDNAME    CHAR(8)  VAR    INIT('');                        /*V04*/ 01576018
+ DCL DDNDSN_RC BIN FIXED(31,0) INIT(0);                         /*V04*/ 01577018
+ /*%INCLUDE KRDSN;*/                                            /*V04*/ 01580018
+1/************************************/                                 01590000
+ /*                                  */                                 01600000
+ /*        S C H A L T E R           */                                 01610000
+ /*                                  */                                 01620000
+ /************************************/                                 01630000
+0DCL     EIN_EOF     BIT(1) INIT('0'B);  /* EOF FUER DATEI EINALL     */01650001
+-/************************************/                                 01670001
+ /*                                  */                                 01680000
+ /*        D I V E R S E S           */                                 01690000
+ /*                                  */                                 01700000
+ /************************************/                                 01710000
+0DCL  BSBG         CHAR(3) INIT ('   '); /* BUCHUNGSSCHLUESSEL/GRUND  */01730001
+                                                                        01740000
+-/************************************/                                 01750000
+ /*                                  */                                 01760000
+ /*        B U I L T I N             */                                 01770000
+ /*                                  */                                 01780000
+ /************************************/                                 01790000
+0DCL  (HIGH,DATE,SUBSTR,ADDR,TIME,ONCODE,ALLOCN,LENGTH,PLIDUMP,STRING,  01810001
+       INDEX,ABS,DIVIDE,ROUND,MULTIPLY,VERIFY) BUILTIN;                 01820000
+1/*********************************************************************/01840000
+ /*                                                                   */01850000
+ /*      Z A E H L E R     /     V E R S C H I E D E N E S            */01860000
+ /*                                                                   */01870000
+ /*********************************************************************/01880000
+0DCL     WSYSDAT     CHAR(6),               /* SYSTEM - DATUM        */ 01900001
+         WSYSTIME    CHAR(9);               /* SYSTEM - ZEIT         */ 01910000
+                                                                        01920000
+ DCL     Z_ZEILE     BIN FIXED(31);                                     01930000
+ DCL     Z_SEITE     BIN FIXED(31);                                     01940000
+                                                                        01950000
+ DCL     Z_EINALL    BIN FIXED(31) INIT(0);                             01960000
+ DCL     Z_AUSRPK    BIN FIXED(31) INIT(0);                             01970000
+ DCL     Z_AUSREST   BIN FIXED(31) INIT(0);                             01980000
+ DCL     Z_AUSKKMB   BIN FIXED(31) INIT(0);                   /* V03 */ 01981015
+1/*------------------------------------------------------------------*/ 01990000
+ /*          GRUNDSTELLUNG                                           */ 02000000
+ /*------------------------------------------------------------------*/ 02010000
+                                                                        02020000
+     ON ERROR BEGIN;                                                    02030000
+        CALL PLIDUMP ('TFCHB');                                         02040000
+     END;                                                               02050000
+                                                                        02060000
+     ON ENDFILE(EINALL) BEGIN;                                          02070000
+        EIN_EOF = '1'B;                                                 02080000
+     END;                                                               02090000
+                                                                        02100000
+                                                                        02110000
+     WSYSDAT  = DATE;                         /* SYSTEM-DATUM HOLEN   */02120000
+     WSYSTIME = TIME;                         /* SYSTEM-ZEIT HOLEN    */02130000
+                                                                        02140000
+     UEBDAT  = SUBSTR(WSYSDAT,5,2)   !! '.' !! SUBSTR(WSYSDAT,3,2)      02150000
+               !! '.' !! SUBSTR(WSYSDAT,1,2);                           02160000
+     UEBZEIT  = SUBSTR(WSYSTIME,1,2) !! '.' !! SUBSTR(WSYSTIME,3,2)     02170000
+               !! '.' !! SUBSTR(WSYSTIME,5,2);                          02180000
+     UEB1ABT = ZVT_LISTVERTEILER(1,1);                                  02190000
+     Z_ZEILE = 99;                                                      02200000
+     BFBEBU  = '';                                                      02210003
+1/*------------------------------------------------------------------*/ 02220000
+ /*               RPK-DATEI VERARBEITEN                              */ 02230000
+ /*------------------------------------------------------------------*/ 02240000
+      OPEN FILE(EINALL),                                                02250000
+           FILE(AUSRPK),                                                02260000
+           FILE(AUSREST),                                               02270011
+           FILE(AUSKKMB),                                     /* V03 */ 02270115
+           FILE(LISTE);                                                 02271011
+                                                                        02280000
+      READ  FILE(EINALL) INTO(BFBEBU);                                  02290000
+                                                                        02300000
+      DO WHILE (^EIN_EOF);                                              02310000
+        Z_EINALL = Z_EINALL + 1;                                        02320000
+        IF BFBEBU.UEBGEB = '06'                                         02330004
+        THEN DO;                                                        02350000
+                                 /*-----------------------------------*/02360000
+                                 /* BEI DIVERSEN BUCHUNGSSCHLUESSELN  */02370000
+                                 /* WERDEN DIE FELDER MENGE1 UND WERT */02380000
+                                 /* VON RW NEGATIV UEBERGEBEN. RP/K   */02390000
+                                 /* WIRD KUENFTIG ALLES POSITIV UEBER-*/02400000
+                                 /* LEITEN. DESHALB WERDEN DIE FELDER */02410000
+                                 /* UNABHAENGIG VOM EINSATZ RP/K      */02420000
+                                 /* HIER POSITIV GESETZT.             */02430000
+                                 /* STAND 22.1.88                     */02440000
+                                 /*-----------------------------------*/02450000
+          BFBEBU.KZ_VZ = '0';                                           02460001
+          IF BFBEBU.MENGE < 0 THEN DO;                                  02470001
+             BFBEBU.MENGE = BFBEBU.MENGE * -1;                          02480001
+             BFBEBU.KZ_VZ = '1';                                        02490001
+          END;                                                          02500000
+          IF BFBEBU.RECH_WERT < 0 THEN DO;                              02510012
+             BFBEBU.RECH_WERT = BFBEBU.RECH_WERT * -1;                  02520012
+             BFBEBU.KZ_VZ = '2';                                        02530001
+          END;                                                          02540000
+                                 /*-----------------------------------*/02550000
+                                 /* BUCHUNGSSCHLUESSEL FUER           */02560000
+                                 /* KUMULATION                        */02570000
+                                 /*-----------------------------------*/02580000
+          IF BFBEBU.BS = '10'                                           02581020
+           ! BFBEBU.BS = '15'                                           02581120
+           ! BFBEBU.BS = '90'                                 /* V05 */ 02581220
+          THEN BFBEBU.BUCH_ALT = BFBEBU.BUCH_NR;                        02582013
+          BSBG     = BFBEBU.BS !! BFBEBU.GRD;                           02590004
+          IF BSBG = '100' !                                             02600000
+             BSBG = '150' !                                             02620000
+             BSBG = '501' !                                             02640008
+             BSBG = '502' !                                             02650008
+             BSBG = '551' !                                             02660008
+             BSBG = '552' !                                             02670019
+             BSBG = '900' !                                   /* V05 */ 02671019
+             BSBG = '901'                                     /* V05 */ 02672019
+          THEN DO;                                                      02680000
+            WRITE FILE(AUSRPK) FROM(BFBEBU);                            02681010
+            Z_AUSRPK = Z_AUSRPK + 1;                                    02682010
+          END;                                                          02691009
+          ELSE DO;                                                      02700009
+            IF BFBEBU.BS = '80'                               /* V03 */ 02701015
+            THEN DO;                                          /* V03 */ 02702015
+              WRITE FILE(AUSKKMB) FROM(BFBEBU);               /* V03 */ 02710015
+              Z_AUSKKMB = Z_AUSKKMB + 1;                      /* V03 */ 02720015
+            END;                                              /* V03 */ 02721015
+            ELSE DO;                                                    02730015
+              WRITE FILE(AUSREST) FROM(BFBEBU);                         02740015
+              Z_AUSREST = Z_AUSREST + 1;                                02741015
+            END;                                                        02750015
+          END;                                                          02751015
+        END;                                                            02760010
+        ELSE DO;                                                        02770011
+          DSATZ  = 'SATZ MIT UEBGEB UNGLEICH 06 EINGELESEN ';           02772011
+          CALL EINZELZEILE;                                             02773011
+          SIGNAL ERROR;                                                 02774011
+        END;                                                            02780011
+        READ  FILE(EINALL)  INTO(BFBEBU);                               02850000
+      END;                                                              02860000
+0     CLOSE FILE(EINALL),                                               02880008
+            FILE(AUSRPK),                                               02890000
+            FILE(AUSREST),                                              02900015
+            FILE(AUSKKMB);                                    /* V03 */ 02910015
+0  CALL PROTOKOLL;                                                      02930008
+   CLOSE FILE(LISTE);                                                   02940000
+                                                                        02950000
+0/*-------------------------------------------------------------------*/02960000
+                                                                        02970000
+1/*FA*****************************************************************/ 02980000
+ /*10 BEZ./NR. EVA-DIAGRAMM : PROTOKOLL                              */ 02990000
+ /*20 EINGABE-ELEMENTE      : -                                      */ 03000000
+ /*30 AUSGABE-ELEMENTE      : DBER                                   */ 03010000
+ /*40 KURZBESCHREIBUNG      : DRUCK DES PROTOKOLLS                   */ 03020000
+ /*FE*****************************************************************/ 03030000
+                                                                        03040000
+ PROTOKOLL:  PROC;                                                      03050000
+-   CALL UEBERSCHRIFT;                                                  03080002
+0        DASA  = '0';                                                   03100000
+         DSATZ = '***';                                                 03110000
+         CALL EINZELZEILE;                                              03120000
+         DASA  = ' ';                                                   03130000
+         DSATZ = '***  FOLGENDE DATEIEN WURDEN VERWENDET: ';            03140000
+         CALL EINZELZEILE;                                              03150000
+         DSATZ = '***';                                                 03160000
+         CALL EINZELZEILE;                                              03170000
+                                                                        03171018
+         DDNAME    = 'EINALL';                                  /*V04*/ 03172018
+         DSNNAME   = '';                                        /*V04*/ 03174018
+         DDNDSN_RC = P9TCTDY(DSNNAME,DDNAME);                   /*V04*/ 03176018
+0        /*CALL P9KRDSN ('EINALL  ',DSNNAME);*/                 /*V04*/ 03180018
+         DSATZ = '***RPK EINGABEDATEI           DD =  EINALL  DSN = ' !!03190015
+                 DSNNAME;                                               03200000
+         CALL EINZELZEILE;                                              03210000
+                                                                        03211018
+         DDNAME    = 'AUSRPK';                                  /*V04*/ 03212018
+         DSNNAME   = '';                                        /*V04*/ 03213018
+         DDNDSN_RC = P9TCTDY(DSNNAME,DDNAME);                   /*V04*/ 03214018
+0        /*CALL P9KRDSN ('AUSRPK  ',DSNNAME);*/                 /*V04*/ 03220018
+         DSATZ = '***RPK AUSGABE F. VERDICHTUNG DD =  AUSRPK  DSN = ' !!03230015
+                 DSNNAME;                                               03240000
+         CALL EINZELZEILE;                                              03250000
+                                                                        03251018
+         DDNAME    = 'AUSREST';                                 /*V04*/ 03252018
+         DSNNAME   = '';                                        /*V04*/ 03253018
+         DDNDSN_RC = P9TCTDY(DSNNAME,DDNAME);                   /*V04*/ 03254018
+0        /*CALL P9KRDSN ('AUSREST ',DSNNAME);*/                 /*V04*/ 03260018
+         DSATZ = '***RPK AUSGABE O. VERDICHTUNG DD =  AUSREST DSN = ' !!03270015
+                 DSNNAME;                                               03280000
+         CALL EINZELZEILE;                                              03290000
+                                                                        03290118
+         DDNAME    = 'AUSKKMB';                                 /*V04*/ 03290218
+         DSNNAME   = '';                                        /*V04*/ 03290318
+         DDNDSN_RC = P9TCTDY(DSNNAME,DDNAME);                   /*V04*/ 03290418
+0        /*CALL P9KRDSN ('AUSKKMB ',DSNNAME);*/                 /*V04*/ 03291018
+         DSATZ = '***RPK AUSGABE KONTROLLSAETZE DD =  AUSKKMB DSN = ' !!03292015
+                 DSNNAME;                                               03293015
+         CALL EINZELZEILE;                                              03294015
+                                                                        03300000
+    CALL UEBERSCHRIFT;                                                  03310000
+                                                                        03320000
+                                                                        03330000
+                                                                        03340000
+    TEXT_NEU.ASA  =  '-';                                               03391010
+    TEXT11  = 'ANZAHL RPK SAETZE GELESEN                :   ';          03392016
+    ZAEHLER =  Z_EINALL;                                                03393010
+    CALL EINZELZEILE;                                                   03394010
+                                                                        03395010
+    TEXT_NEU.ASA  =  '-';                                               03400000
+    TEXT11  = 'ANZAHL RPK SAETZE FUER VERDICHTUNG       :   ';          03410016
+    ZAEHLER =  Z_AUSRPK;                                                03420000
+    CALL EINZELZEILE;                                                   03430000
+                                                                        03440000
+    TEXT_NEU.ASA  =  '-';                                               03450000
+    TEXT11  = 'ANZAHL RPK SAETZE OHNE VERDICHTUNG       :   ';          03460016
+    ZAEHLER =  Z_AUSREST;                                               03470000
+    CALL EINZELZEILE;                                                   03480000
+                                                                        03481015
+    TEXT_NEU.ASA  =  '-';                                               03482015
+    TEXT11  = 'ANZAHL KONTROLLSAETZE KOSTENL. MATBEIST. :   ';          03483016
+    ZAEHLER =  Z_AUSKKMB;                                               03484015
+    CALL EINZELZEILE;                                                   03485015
+                                                                        03490000
+                                                                        03500000
+ END PROTOKOLL;                                                         03510000
+                                                                        03520000
+1/*FA*****************************************************************/ 03530000
+ /*10 BEZ./NR. EVA-DIAGRAMM : UEBERSCHRIFT                           */ 03540000
+ /*20 EINGABE-ELEMENTE      : UEBERSCHRIFTEN LAUFPROTOKOLL           */ 03550000
+ /*30 AUSGABE-ELEMENTE      : SEITENZAEHLER UEBPAGE                  */ 03560000
+ /*40 KURZBESCHREIBUNG      : DRUCKEN UEBERSCHRIFTEN LAUFPROTOKOLL   */ 03570000
+ /*FE*****************************************************************/ 03580000
+                                                                        03590000
+ UEBERSCHRIFT: PROC;                                                    03600000
+                                                                        03610000
+     DBERX = DBER;                                                      03620000
+     UEB1_L.UEBPGNR  = 'P4BF637';                                       03630000
+     UEBDAT          = SUBSTR(WSYSDAT,5,2) !! '.' !! SUBSTR(WSYSDAT,3,2)03640000
+                       !! '.' !! SUBSTR(WSYSDAT,1,2);                   03650000
+     DBER            = LUEB1;                                           03660000
+     WRITE FILE(LISTE) FROM(DBER);                                      03670000
+     UEBZEIT         = SUBSTR(WSYSTIME,1,2) !!'.'!! SUBSTR(WSYSTIME,3,2)03680000
+                     !! '.' !! SUBSTR(WSYSTIME,5,2);                    03690000
+     DBER            = LUEB2;                                           03700000
+     WRITE FILE(LISTE) FROM(DBER);                                      03710000
+     Z_SEITE         = Z_SEITE + 1;                                     03720000
+     UEB3_L.UEBPAGE  = Z_SEITE;                                         03730000
+     DBER            = LUEB3;                                           03740000
+     WRITE FILE(LISTE) FROM(DBER);                                      03750000
+     DBER            = ' ' !! (132)'*';                                 03760000
+     WRITE FILE(LISTE) FROM(DBER);                                      03770000
+     DBER            = '-';                                             03780000
+     WRITE FILE(LISTE) FROM(DBER);                                      03790000
+                                                                        03800000
+     TEXT1        =  'D A T E I S T A T I S T I K ';                    03810000
+     WRITE FILE(LISTE) FROM(DBER);                                      03820000
+     DBER         =  '-' !! (132)'-';                                   03830000
+     WRITE FILE(LISTE) FROM(DBER);                                      03840000
+     DBER         =  DBER_LOESCH;                                       03850000
+     WRITE FILE(LISTE) FROM(DBER);                                      03860000
+     TEXT_NEU.ASA =  '-';                                               03870000
+     WRITE FILE(LISTE) FROM(DBER);                                      03880000
+     Z_ZEILE      =  15;                                                03890000
+     TEXT_NEU.ASA =  '-';                                               03900000
+     DBER = DBERX;                                                      03910000
+                                                                        03920000
+-END UEBERSCHRIFT;                                                      03930000
+                                                                        03940000
+1/*FA*****************************************************************/ 03950000
+ /*10 BEZ./NR. EVA-DIAGRAMM : EINZELZEILE                            */ 03960000
+ /*20 EINGABE-ELEMENTE      : EINZELZEILE FUER LAUFPROTOKOLL         */ 03970000
+ /*30 AUSGABE-ELEMENTE      : SATZZAEHLER Z_ZEILE                    */ 03980000
+ /*40 KURZBESCHREIBUNG      : FUELLEN ALLER FELDER FUER EINZELZEILE  */ 03990000
+ /*                           DES LAUFPROTOKOLLS.                    */ 04000000
+ /*FE*****************************************************************/ 04010000
+                                                                        04020000
+ EINZELZEILE: PROC;                                                     04030000
+                                                                        04040000
+                                                                        04050000
+   IF Z_ZEILE > 55                                                      04060000
+     THEN CALL UEBERSCHRIFT;                                            04070000
+                                                                        04080000
+   WRITE FILE(LISTE) FROM(DBER);                                        04090000
+                                                                        04100000
+   SELECT (TEXT_NEU.ASA);                                               04110000
+     WHEN (' ')                                                         04120000
+       Z_ZEILE  =  Z_ZEILE + 1;                                         04130000
+     WHEN ('0')                                                         04140000
+       Z_ZEILE  =  Z_ZEILE + 2;                                         04150000
+     WHEN ('-')                                                         04160000
+       Z_ZEILE  =  Z_ZEILE + 3;                                         04170000
+     OTHERWISE;                                                /* EC */ 04171017
+   END;                                                                 04180000
+                                                                        04190000
+   DBER     = DBER_LOESCH;                                              04200000
+                                                                        04210000
+ END EINZELZEILE;                                                       04220000
+ %INCLUDE ATLISTVI;                                                     04230000
+0END P4BF637;                                                           04240000

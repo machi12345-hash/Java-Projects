@@ -1,0 +1,824 @@
+ NEWPAGE                                                                00010000
+ ** P3BF607: ZWWV-ANALYSE NACH ZIEL-/HERKUNFTSWERK                   ** 00020000
+ **MA****************************************************************** 00030000
+ **05 ABTEILUNG            : FC-41                                   ** 00040000
+ **                                                                  ** 00050000
+ **10 PROJEKT              : PRODUKTIONSFLUSSRECHNUNG                ** 00060000
+ **                                                                  ** 00070000
+ **15 TEILPROJEKT          : HAUSTEILE-BUCHUNGSSYSTEM                ** 00080000
+ **                                                                  ** 00090000
+ **20 MODULNAME            : P3BF607                                 ** 00100000
+ **                                                                  ** 00110000
+ **25 MODULVERWENDBARKEIT  : EZT                                     ** 00120000
+ **                                                                  ** 00130000
+ **30 MODULTYP- / INHALT   : HAUPTMODUL                              ** 00140000
+ **                                                                  ** 00150000
+ **35 ERSTELLT AM          : 02.08.91                                ** 00160000
+ **                                                                  ** 00170000
+ **40 PROGRAMMIERER        : R. KRAUT                                ** 00180000
+ **                                                                  ** 00190000
+ **50 AUFTRAGGEBER         : FC-13                                   ** 00200000
+ **                                                                  ** 00210000
+ **60 KURZBESCHREIBUNG     : ZWWV-ANALYSE NACH ZIEL-/HERKUNFTSWERK   ** 00220000
+ **                                                                  ** 00230000
+ ********************************************************************** 00240000
+ **VA================================================================** 00250000
+ **            A E N D E R U N G S N A C H W E I S                   ** 00260000
+ **==================================================================** 00270000
+ ** AEND.! AEND.    ! GEAENDERT ! GRUND / AUFTRAG                    ** 00280000
+ ** NR.  ! DATUM    ! NAME      !                                    ** 00290000
+ **==================================================================** 00300000
+ ** V01  ! 02.08.91 ! R. KRAUT  ! ERSTERSTELLUNG                     ** 00310000
+ ** V02  ! 08.11.91 ! R. KRAUT  ! LISTERWEITERUNG: SORT NACH SNR     ** 00320000
+ ** V03  ! 25.09.95 ! R. KRAUT  ! VERLAENGERUNG STRUKTUR BFBEBU AUF  ** 00330000
+ **      !          !           ! 400 STELLEN                        ** 00340000
+ ** V04  ! 23.02.96 ! R. KRAUT  ! MATERIALKOSTEN MIT ANDRUCKEN       ** 00350000
+ ** V05  ! 10.09.96 ! R. KRAUT  ! LISTAUSGABE FUER ZENTRALE EINFUEGEN** 00360000
+ ** V06  ! 15.04.97 ! R. KRAUT  ! GEWUENSCHTE AENDERUNG W60/FC-12:   ** 00370000
+ **      !          !           ! STATT EINZELWERT = PROP.HK         ** 00380000
+ **      !          !           ! KUENFTIG EINZELWERT = MATKO        ** 00390000
+ ** V07  ! 16.07.97 ! C. FRANK  ! ANPASSEN AN NEUE STRUKTUR BFBEBU   ** 00400000
+ ** V08  ! 10.01.00 ! MSG       ! BFBEBU VON 400 => 800 STELLEN      ** 00410001
+ **      !          !           ! LINESIZE , SATZLAENGE, BLKSIZE     ** 00420005
+ **      !          !           ! GEAENDERT                          ** 00430005
+ **VE================================================================** 00440000
+ **ME****************************************************************** 00450000
+ *                                                                      00460000
+ PARM LINK (P3BF607 R) +                                                00470000
+      DEBUG (CLIST, DMAP) +                                             00480000
+      VFM (10) PRESIZE 2048                                             00490000
+ *                                                                      00500000
+ NEWPAGE                                                                00510000
+ *======================================================================00520000
+ *      LIBRARY  SECTION                                                00530000
+ *======================================================================00540000
+ *                                                                      00550000
+ FILE EINGABE                                                           00560000
+ %BFBEBU P 'BF_'                                                        00570003
+ *                                                                      00580000
+ NEWPAGE                                                                00590000
+ FILE VERTEIL                                                           00600000
+ %ATLISTVI P ' '                                                        00610000
+ *                                                                      00620000
+ NEWPAGE                                                                00630000
+ *    **** V08 SL/BLK (133 6251) AUF (166 7802 ) GEAENDERT          ****00640005
+ *    **** V08 LINESIZE VON 132 AUF  165         GEAENDERT          ****00650007
+ FILE LISTE0 PRINTER FB (166 7802)                                      00660005
+ FILE LISTE1 PRINTER FB (166 7802)                                      00670005
+ FILE LISTE2 PRINTER FB (166 7802)                                      00680005
+ FILE LISTE3 PRINTER FB (166 7802)                                      00690005
+ FILE LISTE4 PRINTER FB (166 7802)                                      00700005
+ FILE LISTE6 PRINTER FB (166 7802)                                      00710005
+ FILE LISTEZ PRINTER FB (166 7802)                                      00720005
+ FILE LISTEA PRINTER FB (166 7802)                                      00730005
+ FILE LISTEB PRINTER FB (166 7802)                                      00740005
+ FILE LISTEC PRINTER FB (166 7802)                                      00750005
+ FILE LISTED PRINTER FB (166 7802)                                      00760005
+ FILE LISTEF PRINTER FB (166 7802)                                      00770005
+ *                                                                      00780000
+ FILE LISNR0 PRINTER FB (166 7802)                                      00790005
+ FILE LISNR1 PRINTER FB (166 7802)                                      00800005
+ FILE LISNR2 PRINTER FB (166 7802)                                      00810005
+ FILE LISNR3 PRINTER FB (166 7802)                                      00820005
+ FILE LISNR4 PRINTER FB (166 7802)                                      00830005
+ FILE LISNR6 PRINTER FB (166 7802)                                      00840005
+ FILE LISNRZ PRINTER FB (166 7802)                                      00850005
+ FILE LISNRA PRINTER FB (166 7802)                                      00860005
+ FILE LISNRB PRINTER FB (166 7802)                                      00870005
+ FILE LISNRC PRINTER FB (166 7802)                                      00880005
+ FILE LISNRD PRINTER FB (166 7802)                                      00890005
+ FILE LISNRF PRINTER FB (166 7802)                                      00900005
+ *                                                                      00910000
+ Z0         W           6   P   0                                       00920000
+ Z1         W           6   P   0                                       00930000
+ Z2         W           6   P   0                                       00940000
+ Z3         W           6   P   0                                       00950000
+ Z4         W           6   P   0                                       00960000
+ Z6         W           6   P   0                                       00970000
+ ZZ         W           6   P   0                                       00980000
+ ZA         W           6   P   0                                       00990000
+ ZB         W           6   P   0                                       01000000
+ ZC         W           6   P   0                                       01010000
+ ZD         W           6   P   0                                       01020000
+ ZF         W           6   P   0                                       01030000
+ EINZELW    W           4   P   2   HEADING ('E-WERT')                  01040000
+ EW_MATKO   W           4   P   2   HEADING ('EW MATKO')                01050000
+ MATKO      W           6   P   2   HEADING ('MAT.KOSTEN')              01060000
+ SOLL1      W          10   A                                           01070004
+ HABEN1     W          10   A                                           01080004
+ BS_G       W           4   A       HEADING ('BS/G')                    01090000
+ Z_BS  BS_G    2 A                                                      01100000
+ Z_X   BS_G +2 1 A                                                      01110000
+ Z_GRD BS_G +3 1 A                                                      01120000
+ *                                                                      01130000
+ NEWPAGE                                                                01140000
+ %BFABRPER                                                              01150000
+ NEWPAGE                                                                01160000
+ *======================================================================01170000
+ *      ACTIVITY SECTION                                                01180000
+ *======================================================================01190000
+ JOB INPUT EINGABE START BEGIN FINISH FINITO                            01200000
+ *                                                                      01210000
+ Z_BS  = BF_BS                                                          01220000
+ Z_GRD = BF_GRD                                                         01230000
+ *                                                                      01240000
+ IF BF_MENGE NQ 0                                                       01250000
+    EINZELW = BF_HK_PROP / BF_MENGE                                     01260000
+    EW_MATKO = BF_MATKO / BF_MENGE                                      01270000
+ ELSE                                                                   01280000
+    EINZELW  = 0                                                        01290000
+    EW_MATKO = 0                                                        01300000
+ END-IF                                                                 01310000
+ *    **** STORNOS, DIE IN DER MTD 0036 ALS ZUGANG DEFINIERT SIND,  ****01320000
+ *    ****          SOLLEN NEGATIV GESETZT WERDEN                   ****01330000
+ IF BF_VZ_36 = '0'                                                      01340000
+    BF_HK_PROP = BF_HK_PROP * -1                                        01350000
+    BF_MENGE    = BF_MENGE    * -1                                      01360000
+    BF_MATKO    = BF_MATKO    * -1                                      01370000
+    HABEN1      = BF_SOLL                                               01380000
+    SOLL1       = BF_HABEN                                              01390000
+    BF_SOLL     = SOLL1                                                 01400000
+    BF_HABEN    = HABEN1                                                01410000
+ END-IF                                                                 01420000
+ *    **** MATERIALKOSTEN AUFBEREITEN                               ****01430000
+ MATKO = BF_MATKO                                                       01440000
+ *                                                                      01450000
+ IF MATKO = 0                                                           01460000
+    MATKO = BF_HK_PROP                                                  01470000
+ END-IF                                                                 01480000
+ *                                                                      01490000
+ IF BF_UEBGEB = '48'                                                    01500000
+    IF BF_BW = '01'                                                     01510000
+       Z0 = Z0 + 1                                                      01520000
+       PRINT LISTE0                                                     01530000
+       PRINT LISNR0                                                     01540000
+    END-IF                                                              01550000
+ *                                                                      01560000
+    IF BF_BW = '10'                                                     01570000
+       Z1 = Z1 + 1                                                      01580000
+       PRINT LISTE1                                                     01590000
+       PRINT LISNR1                                                     01600000
+    END-IF                                                              01610000
+ *                                                                      01620000
+    IF BF_BW = '20'                                                     01630000
+       Z2 = Z2 + 1                                                      01640000
+       PRINT LISTE2                                                     01650000
+       PRINT LISNR2                                                     01660000
+    END-IF                                                              01670000
+ *                                                                      01680000
+    IF BF_BW = '30'                                                     01690000
+       Z3 = Z3 + 1                                                      01700000
+       PRINT LISTE3                                                     01710000
+       PRINT LISNR3                                                     01720000
+    END-IF                                                              01730000
+ *                                                                      01740000
+    IF BF_BW = '40'                                                     01750000
+       Z4 = Z4 + 1                                                      01760000
+       PRINT LISTE4                                                     01770000
+       PRINT LISNR4                                                     01780000
+    END-IF                                                              01790000
+ *                                                                      01800000
+    IF BF_BW = '60'                                                     01810000
+       Z6 = Z6 + 1                                                      01820000
+       PRINT LISTE6                                                     01830000
+       PRINT LISNR6                                                     01840000
+    END-IF                                                              01850000
+ *                                                                      01860000
+    IF BF_HW = '01'                                                     01870000
+       ZZ = ZZ + 1                                                      01880000
+       PRINT LISTEZ                                                     01890000
+       PRINT LISNRZ                                                     01900000
+    END-IF                                                              01910000
+ *                                                                      01920000
+    IF BF_HW = '10'                                                     01930000
+       ZA = ZA + 1                                                      01940000
+       PRINT LISTEA                                                     01950000
+       PRINT LISNRA                                                     01960000
+    END-IF                                                              01970000
+ *                                                                      01980000
+    IF BF_HW = '20'                                                     01990000
+       ZB = ZB + 1                                                      02000000
+       PRINT LISTEB                                                     02010000
+       PRINT LISNRB                                                     02020000
+    END-IF                                                              02030000
+ *                                                                      02040000
+    IF BF_HW = '30'                                                     02050000
+       ZC = ZC + 1                                                      02060000
+       PRINT LISTEC                                                     02070000
+       PRINT LISNRC                                                     02080000
+    END-IF                                                              02090000
+ *                                                                      02100000
+    IF BF_HW = '40'                                                     02110000
+       ZD = ZD + 1                                                      02120000
+       PRINT LISTED                                                     02130000
+       PRINT LISNRD                                                     02140000
+    END-IF                                                              02150000
+ *                                                                      02160000
+    IF BF_HW = '60'                                                     02170000
+       ZF = ZF + 1                                                      02180000
+       PRINT LISTEF                                                     02190000
+       PRINT LISNRF                                                     02200000
+    END-IF                                                              02210000
+ END-IF                                                                 02220000
+ *                                                                      02230000
+ NEWPAGE                                                                02240000
+ BEGIN. PROC                                                            02250000
+ DISPLAY 'PROGRAMM START'                                               02260000
+ Z0 = 0                                                                 02270000
+ Z1 = 0                                                                 02280000
+ Z2 = 0                                                                 02290000
+ Z3 = 0                                                                 02300000
+ Z4 = 0                                                                 02310000
+ Z6 = 0                                                                 02320000
+ ZZ = 0                                                                 02330000
+ ZA = 0                                                                 02340000
+ ZB = 0                                                                 02350000
+ ZC = 0                                                                 02360000
+ ZD = 0                                                                 02370000
+ ZF = 0                                                                 02380000
+ Z_X = '/'                                                              02390000
+ MATKO = 0                                                              02400000
+ GET VERTEIL                                                            02410000
+ END-PROC                                                               02420000
+ *                                                                      02430000
+ FINITO. PROC                                                           02440000
+ DISPLAY 'GELESENE SAETZE ZIELWERK ZENTRALE:' Z0                        02450000
+ DISPLAY 'GELESENE SAETZE ZIELWERK 10      :' Z1                        02460000
+ DISPLAY 'GELESENE SAETZE ZIELWERK 20      :' Z2                        02470000
+ DISPLAY 'GELESENE SAETZE ZIELWERK 30      :' Z3                        02480000
+ DISPLAY 'GELESENE SAETZE ZIELWERK 40      :' Z4                        02490000
+ DISPLAY 'GELESENE SAETZE ZIELWERK 60      :' Z6                        02500000
+ DISPLAY '***'                                                          02510000
+ DISPLAY 'GELESENE SAETZE HERKUNFTSWERK ZENTRALE:' ZZ                   02520000
+ DISPLAY 'GELESENE SAETZE HERKUNFTSWERK 10      :' ZA                   02530000
+ DISPLAY 'GELESENE SAETZE HERKUNFTSWERK 20      :' ZB                   02540000
+ DISPLAY 'GELESENE SAETZE HERKUNFTSWERK 30      :' ZC                   02550000
+ DISPLAY 'GELESENE SAETZE HERKUNFTSWERK 40      :' ZD                   02560000
+ DISPLAY 'GELESENE SAETZE HERKUNFTSWERK 60      :' ZF                   02570000
+ DISPLAY 'PROGRAMM ENDE'                                                02580000
+ END-PROC                                                               02590000
+ *                                                                      02600000
+ NEWPAGE                                                                02610000
+ *======================================================================02620000
+ *      REPORTTEIL            - Z E N T R A L E -                       02630000
+ *======================================================================02640000
+ *                                                                      02650000
+ REPORT LISTE0 PRINTER LISTE0 LINESIZE 165 SPACE 1 SKIP 0   +           02660006
+               NOADJUST NODATE                                          02670000
+ *                                                                      02680000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_HK_PROP D                02690000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             02700000
+ *                                                                      02710000
+ TITLE 1 'EASY.:  P3BF607'              +                               02720000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     02730000
+ TITLE 2 '**** B M W ****'                 +                            02740000
+          COL 53  'ZWWV-BELEG WERK ZENTRALE - ZIELWERK' +               02750000
+          COL 120 'DAT' COL 124 SYSDATE                                 02760000
+ TITLE 3 'ABT.: ' ABT                             +                     02770000
+          COL 120 'UHR' COL 124 SYSTIME                                 02780000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              02790000
+ *                                                                      02800000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      02810000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  02820000
+        EW_MATKO                                                        02830000
+ *                                                                      02840000
+ *                                                                      02850000
+ *======================================================================02860000
+ *      REPORTTEIL            - Z E N T R A L E -                       02870000
+ *======================================================================02880000
+ *                                                                      02890000
+ REPORT LISNR0 PRINTER LISNR0 LINESIZE 165 SPACE 1 SKIP 0   +           02900006
+               NOADJUST NODATE                                          02910000
+ *                                                                      02920000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_SNR                      02930000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             02940000
+ *                                                                      02950000
+ TITLE 1 'EASY.:  P3BF607'              +                               02960000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     02970000
+ TITLE 2 '**** B M W ****'                 +                            02980000
+          COL 53  'ZWWV-BELEG WERK ZENTRALE - ZIELWERK' +               02990000
+          COL 120 'DAT' COL 124 SYSDATE                                 03000000
+ TITLE 3 'ABT.: ' ABT                             +                     03010000
+          COL 120 'UHR' COL 124 SYSTIME                                 03020000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              03030000
+ *                                                                      03040000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                03050000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          03060000
+ *                                                                      03070000
+ NEWPAGE                                                                03080000
+ *======================================================================03090000
+ *      REPORTTEIL            - M U E N C H E N -                       03100000
+ *======================================================================03110000
+ *                                                                      03120000
+ REPORT LISTE1 PRINTER LISTE1 LINESIZE 165 SPACE 1 SKIP 0   +           03130006
+               NOADJUST NODATE                                          03140000
+ *                                                                      03150000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_HK_PROP D                03160000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             03170000
+ *                                                                      03180000
+ TITLE 1 'EASY.:  P3BF607'              +                               03190000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     03200000
+ TITLE 2 '**** B M W ****'                 +                            03210000
+          COL 53  'ZWWV-BELEG WERK MUENCHEN - ZIELWERK' +               03220000
+          COL 120 'DAT' COL 124 SYSDATE                                 03230000
+ TITLE 3 'ABT.: ' ABT                             +                     03240000
+          COL 120 'UHR' COL 124 SYSTIME                                 03250000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              03260000
+ *                                                                      03270000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      03280000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  03290000
+        EW_MATKO                                                        03300000
+ *                                                                      03310000
+ *                                                                      03320000
+ *======================================================================03330000
+ *      REPORTTEIL            - M U E N C H E N -                       03340000
+ *======================================================================03350000
+ *                                                                      03360000
+ REPORT LISNR1 PRINTER LISNR1 LINESIZE 165 SPACE 1 SKIP 0   +           03370006
+               NOADJUST NODATE                                          03380000
+ *                                                                      03390000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_SNR                      03400000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             03410000
+ *                                                                      03420000
+ TITLE 1 'EASY.:  P3BF607'              +                               03430000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     03440000
+ TITLE 2 '**** B M W ****'                 +                            03450000
+          COL 53  'ZWWV-BELEG WERK MUENCHEN - ZIELWERK' +               03460000
+          COL 120 'DAT' COL 124 SYSDATE                                 03470000
+ TITLE 3 'ABT.: ' ABT                             +                     03480000
+          COL 120 'UHR' COL 124 SYSTIME                                 03490000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              03500000
+ *                                                                      03510000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                03520000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          03530000
+ *                                                                      03540000
+ NEWPAGE                                                                03550000
+ *======================================================================03560000
+ *      REPORTTEIL            - D I N G O L F I N G -                   03570000
+ *======================================================================03580000
+ *                                                                      03590000
+ REPORT LISTE2 PRINTER LISTE2 LINESIZE 165 SPACE 1 SKIP 0   +           03600006
+               NOADJUST NODATE                                          03610000
+ *                                                                      03620000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_HK_PROP D                03630000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             03640000
+ *                                                                      03650000
+ TITLE 1 'EASY.:  P3BF607'              +                               03660000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     03670000
+ TITLE 2 '**** B M W ****'                 +                            03680000
+          COL 53  'ZWWV-BELEG WERK DINGOLFING - ZIELWERK'  +            03690000
+          COL 120 'DAT' COL 124 SYSDATE                                 03700000
+ TITLE 3 'ABT.: ' ABT                             +                     03710000
+          COL 120 'UHR' COL 124 SYSTIME                                 03720000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              03730000
+ *                                                                      03740000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      03750000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  03760000
+        EW_MATKO                                                        03770000
+ *                                                                      03780000
+ *                                                                      03790000
+ *======================================================================03800000
+ *      REPORTTEIL            - D I N G O L F I N G -                   03810000
+ *======================================================================03820000
+ *                                                                      03830000
+ REPORT LISNR2 PRINTER LISNR2 LINESIZE 165 SPACE 1 SKIP 0   +           03840006
+               NOADJUST NODATE                                          03850000
+ *                                                                      03860000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_SNR                      03870000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             03880000
+ *                                                                      03890000
+ TITLE 1 'EASY.:  P3BF607'              +                               03900000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     03910000
+ TITLE 2 '**** B M W ****'                 +                            03920000
+          COL 53  'ZWWV-BELEG WERK DINGOLFING - ZIELWERK'  +            03930000
+          COL 120 'DAT' COL 124 SYSDATE                                 03940000
+ TITLE 3 'ABT.: ' ABT                             +                     03950000
+          COL 120 'UHR' COL 124 SYSTIME                                 03960000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              03970000
+ *                                                                      03980000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                03990000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          04000000
+ *                                                                      04010000
+ NEWPAGE                                                                04020000
+ *======================================================================04030000
+ *      REPORTTEIL            - B E R L I N -                           04040000
+ *======================================================================04050000
+ *                                                                      04060000
+ REPORT LISTE3 PRINTER LISTE3 LINESIZE 165 SPACE 1 SKIP 0   +           04070006
+               NOADJUST NODATE                                          04080000
+ *                                                                      04090000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_HK_PROP D                04100000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             04110000
+ *                                                                      04120000
+ TITLE 1 'EASY.:  P3BF607'              +                               04130000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     04140000
+ TITLE 2 '**** B M W ****'                 +                            04150000
+          COL 53  'ZWWV-BELEG WERK BERLIN - ZIELWERK' +                 04160000
+          COL 120 'DAT' COL 124 SYSDATE                                 04170000
+ TITLE 3 'ABT.: ' ABT                             +                     04180000
+          COL 120 'UHR' COL 124 SYSTIME                                 04190000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              04200000
+ *                                                                      04210000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      04220000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  04230000
+        EW_MATKO                                                        04240000
+ *                                                                      04250000
+ *                                                                      04260000
+ *======================================================================04270000
+ *      REPORTTEIL            - B E R L I N -                           04280000
+ *======================================================================04290000
+ *                                                                      04300000
+ REPORT LISNR3 PRINTER LISNR3 LINESIZE 165 SPACE 1 SKIP 0   +           04310006
+               NOADJUST NODATE                                          04320000
+ *                                                                      04330000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_SNR                      04340000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             04350000
+ *                                                                      04360000
+ TITLE 1 'EASY.:  P3BF607'              +                               04370000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     04380000
+ TITLE 2 '**** B M W ****'                 +                            04390000
+          COL 53  'ZWWV-BELEG WERK BERLIN - ZIELWERK' +                 04400000
+          COL 120 'DAT' COL 124 SYSDATE                                 04410000
+ TITLE 3 'ABT.: ' ABT                             +                     04420000
+          COL 120 'UHR' COL 124 SYSTIME                                 04430000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              04440000
+ *                                                                      04450000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                04460000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          04470000
+ *                                                                      04480000
+ NEWPAGE                                                                04490000
+ *======================================================================04500000
+ *      REPORTTEIL            - L A N D S H U T -                       04510000
+ *======================================================================04520000
+ *                                                                      04530000
+ REPORT LISTE4 PRINTER LISTE4 LINESIZE 165 SPACE 1 SKIP 0   +           04540006
+               NOADJUST NODATE                                          04550000
+ *                                                                      04560000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_HK_PROP D                04570000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             04580000
+ *                                                                      04590000
+ TITLE 1 'EASY.:  P3BF607'              +                               04600000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     04610000
+ TITLE 2 '**** B M W ****'                 +                            04620000
+          COL 53  'ZWWV-BELEG WERK LANDSHUT - ZIELWERK'  +              04630000
+          COL 120 'DAT' COL 124 SYSDATE                                 04640000
+ TITLE 3 'ABT.: ' ABT                             +                     04650000
+          COL 120 'UHR' COL 124 SYSTIME                                 04660000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              04670000
+ *                                                                      04680000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      04690000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  04700000
+        EW_MATKO                                                        04710000
+ *                                                                      04720000
+ *                                                                      04730000
+ *======================================================================04740000
+ *      REPORTTEIL            - L A N D S H U T -                       04750000
+ *======================================================================04760000
+ *                                                                      04770000
+ REPORT LISNR4 PRINTER LISNR4 LINESIZE 165 SPACE 1 SKIP 0   +           04780006
+               NOADJUST NODATE                                          04790000
+ *                                                                      04800000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_SNR                      04810000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             04820000
+ *                                                                      04830000
+ TITLE 1 'EASY.:  P3BF607'              +                               04840000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     04850000
+ TITLE 2 '**** B M W ****'                 +                            04860000
+          COL 53  'ZWWV-BELEG WERK LANDSHUT - ZIELWERK'  +              04870000
+          COL 120 'DAT' COL 124 SYSDATE                                 04880000
+ TITLE 3 'ABT.: ' ABT                             +                     04890000
+          COL 120 'UHR' COL 124 SYSTIME                                 04900000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              04910000
+ *                                                                      04920000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                04930000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          04940000
+ *                                                                      04950000
+ NEWPAGE                                                                04960000
+ *======================================================================04970000
+ *      REPORTTEIL            - R E G E N S B U R G -                   04980000
+ *======================================================================04990000
+ *                                                                      05000000
+ REPORT LISTE6 PRINTER LISTE6 LINESIZE 165 SPACE 1 SKIP 0   +           05010006
+               NOADJUST NODATE                                          05020000
+ *                                                                      05030000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_HK_PROP D                05040000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             05050000
+ *                                                                      05060000
+ TITLE 1 'EASY.:  P3BF607'              +                               05070000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     05080000
+ TITLE 2 '**** B M W ****'                 +                            05090000
+          COL 53  'ZWWV-BELEG WERK REGENSBURG - ZIELWERK' +             05100000
+          COL 120 'DAT' COL 124 SYSDATE                                 05110000
+ TITLE 3 'ABT.: ' ABT                             +                     05120000
+          COL 120 'UHR' COL 124 SYSTIME                                 05130000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              05140000
+ *                                                                      05150000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      05160000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  05170000
+        EW_MATKO                                                        05180000
+ *                                                                      05190000
+ *                                                                      05200000
+ *======================================================================05210000
+ *      REPORTTEIL            - R E G E N S B U R G -                   05220000
+ *======================================================================05230000
+ *                                                                      05240000
+ REPORT LISNR6 PRINTER LISNR6 LINESIZE 165 SPACE 1 SKIP 0   +           05250006
+               NOADJUST NODATE                                          05260000
+ *                                                                      05270000
+ SEQUENCE BF_BW BF_HW BF_SOLL BF_HABEN BS_G BF_SNR                      05280000
+ CONTROL  BF_BW BF_HW BF_SOLL BF_HABEN BS_G                             05290000
+ *                                                                      05300000
+ TITLE 1 'EASY.:  P3BF607'              +                               05310000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     05320000
+ TITLE 2 '**** B M W ****'                 +                            05330000
+          COL 53  'ZWWV-BELEG WERK REGENSBURG - ZIELWERK' +             05340000
+          COL 120 'DAT' COL 124 SYSDATE                                 05350000
+ TITLE 3 'ABT.: ' ABT                             +                     05360000
+          COL 120 'UHR' COL 124 SYSTIME                                 05370000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              05380000
+ *                                                                      05390000
+ LINE 1 BF_BW BF_HW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                05400000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          05410000
+ *                                                                      05420000
+ NEWPAGE                                                                05430000
+ *======================================================================05440000
+ *      REPORTTEIL            - Z E N T R A L E -                       05450000
+ *======================================================================05460000
+ *                                                                      05470000
+ REPORT LISTEZ PRINTER LISTEZ LINESIZE 165 SPACE 1 SKIP 0   +           05480006
+               NOADJUST NODATE                                          05490000
+ *                                                                      05500000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_HK_PROP D                05510000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             05520000
+ *                                                                      05530000
+ TITLE 1 'EASY.:  P3BF607'              +                               05540000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     05550000
+ TITLE 2 '**** B M W ****'                 +                            05560000
+          COL 53  'ZWWV-BELEG WERK ZENTRALE - HERKUNFTSWERK' +          05570000
+          COL 120 'DAT' COL 124 SYSDATE                                 05580000
+ TITLE 3 'ABT.: ' ABT                             +                     05590000
+          COL 120 'UHR' COL 124 SYSTIME                                 05600000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              05610000
+ *                                                                      05620000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      05630000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  05640000
+        EW_MATKO                                                        05650000
+ *                                                                      05660000
+ *                                                                      05670000
+ *======================================================================05680000
+ *      REPORTTEIL            - Z E N T R A L E -                       05690000
+ *======================================================================05700000
+ *                                                                      05710000
+ REPORT LISNRZ PRINTER LISNRZ LINESIZE 165 SPACE 1 SKIP 0   +           05720006
+               NOADJUST NODATE                                          05730000
+ *                                                                      05740000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_SNR                      05750000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             05760000
+ *                                                                      05770000
+ TITLE 1 'EASY.:  P3BF607'              +                               05780000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     05790000
+ TITLE 2 '**** B M W ****'                 +                            05800000
+          COL 53  'ZWWV-BELEG WERK ZENTRALE - HERKUNFTSWERK' +          05810000
+          COL 120 'DAT' COL 124 SYSDATE                                 05820000
+ TITLE 3 'ABT.: ' ABT                             +                     05830000
+          COL 120 'UHR' COL 124 SYSTIME                                 05840000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              05850000
+ *                                                                      05860000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                05870000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          05880000
+ *                                                                      05890000
+ NEWPAGE                                                                05900000
+ *======================================================================05910000
+ *      REPORTTEIL            - M U E N C H E N -                       05920000
+ *======================================================================05930000
+ *                                                                      05940000
+ REPORT LISTEA PRINTER LISTEA LINESIZE 165 SPACE 1 SKIP 0   +           05950006
+               NOADJUST NODATE                                          05960000
+ *                                                                      05970000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_HK_PROP D                05980000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             05990000
+ *                                                                      06000000
+ TITLE 1 'EASY.:  P3BF607'              +                               06010000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     06020000
+ TITLE 2 '**** B M W ****'                 +                            06030000
+          COL 53  'ZWWV-BELEG WERK MUENCHEN - HERKUNFTSWERK' +          06040000
+          COL 120 'DAT' COL 124 SYSDATE                                 06050000
+ TITLE 3 'ABT.: ' ABT                             +                     06060000
+          COL 120 'UHR' COL 124 SYSTIME                                 06070000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              06080000
+ *                                                                      06090000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      06100000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  06110000
+        EW_MATKO                                                        06120000
+ *                                                                      06130000
+ *                                                                      06140000
+ *======================================================================06150000
+ *      REPORTTEIL            - M U E N C H E N -                       06160000
+ *======================================================================06170000
+ *                                                                      06180000
+ REPORT LISNRA PRINTER LISNRA LINESIZE 165 SPACE 1 SKIP 0   +           06190006
+               NOADJUST NODATE                                          06200000
+ *                                                                      06210000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_SNR                      06220000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             06230000
+ *                                                                      06240000
+ TITLE 1 'EASY.:  P3BF607'              +                               06250000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     06260000
+ TITLE 2 '**** B M W ****'                 +                            06270000
+          COL 53  'ZWWV-BELEG WERK MUENCHEN - HERKUNFTSWERK' +          06280000
+          COL 120 'DAT' COL 124 SYSDATE                                 06290000
+ TITLE 3 'ABT.: ' ABT                             +                     06300000
+          COL 120 'UHR' COL 124 SYSTIME                                 06310000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              06320000
+ *                                                                      06330000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                06340000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          06350000
+ *                                                                      06360000
+ NEWPAGE                                                                06370000
+ *======================================================================06380000
+ *      REPORTTEIL            - D I N G O L F I N G -                   06390000
+ *======================================================================06400000
+ *                                                                      06410000
+ REPORT LISTEB PRINTER LISTEB LINESIZE 165 SPACE 1 SKIP 0   +           06420006
+               NOADJUST NODATE                                          06430000
+ *                                                                      06440000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_HK_PROP D                06450000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             06460000
+ *                                                                      06470000
+ TITLE 1 'EASY.:  P3BF607'              +                               06480000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     06490000
+ TITLE 2 '**** B M W ****'                 +                            06500000
+          COL 53  'ZWWV-BELEG WERK DINGOLFING - HERKUNFTSWERK'  +       06510000
+          COL 120 'DAT' COL 124 SYSDATE                                 06520000
+ TITLE 3 'ABT.: ' ABT                             +                     06530000
+          COL 120 'UHR' COL 124 SYSTIME                                 06540000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              06550000
+ *                                                                      06560000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      06570000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  06580000
+        EW_MATKO                                                        06590000
+ *                                                                      06600000
+ *                                                                      06610000
+ *======================================================================06620000
+ *      REPORTTEIL            - D I N G O L F I N G -                   06630000
+ *======================================================================06640000
+ *                                                                      06650000
+ REPORT LISNRB PRINTER LISNRB LINESIZE 165 SPACE 1 SKIP 0   +           06660006
+               NOADJUST NODATE                                          06670000
+ *                                                                      06680000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_SNR                      06690000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             06700000
+ *                                                                      06710000
+ TITLE 1 'EASY.:  P3BF607'              +                               06720000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     06730000
+ TITLE 2 '**** B M W ****'                 +                            06740000
+          COL 53  'ZWWV-BELEG WERK DINGOLFING - HERKUNFTSWERK'  +       06750000
+          COL 120 'DAT' COL 124 SYSDATE                                 06760000
+ TITLE 3 'ABT.: ' ABT                             +                     06770000
+          COL 120 'UHR' COL 124 SYSTIME                                 06780000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              06790000
+ *                                                                      06800000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                06810000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          06820000
+ *                                                                      06830000
+ NEWPAGE                                                                06840000
+ *======================================================================06850000
+ *      REPORTTEIL            - B E R L I N -                           06860000
+ *======================================================================06870000
+ *                                                                      06880000
+ REPORT LISTEC PRINTER LISTEC LINESIZE 165 SPACE 1 SKIP 0   +           06890006
+               NOADJUST NODATE                                          06900000
+ *                                                                      06910000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_HK_PROP D                06920000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             06930000
+ *                                                                      06940000
+ TITLE 1 'EASY.:  P3BF607'              +                               06950000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     06960000
+ TITLE 2 '**** B M W ****'                 +                            06970000
+          COL 53  'ZWWV-BELEG WERK BERLIN - HERKUNFTSWERK' +            06980000
+          COL 120 'DAT' COL 124 SYSDATE                                 06990000
+ TITLE 3 'ABT.: ' ABT                             +                     07000000
+          COL 120 'UHR' COL 124 SYSTIME                                 07010000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              07020000
+ *                                                                      07030000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      07040000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  07050000
+        EW_MATKO                                                        07060000
+ *                                                                      07070000
+ *                                                                      07080000
+ *======================================================================07090000
+ *      REPORTTEIL            - B E R L I N -                           07100000
+ *======================================================================07110000
+ *                                                                      07120000
+ REPORT LISNRC PRINTER LISNRC LINESIZE 165 SPACE 1 SKIP 0   +           07130006
+               NOADJUST NODATE                                          07140000
+ *                                                                      07150000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_SNR                      07160000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             07170000
+ *                                                                      07180000
+ TITLE 1 'EASY.:  P3BF607'              +                               07190000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     07200000
+ TITLE 2 '**** B M W ****'                 +                            07210000
+          COL 53  'ZWWV-BELEG WERK BERLIN - HERKUNFTSWERK' +            07220000
+          COL 120 'DAT' COL 124 SYSDATE                                 07230000
+ TITLE 3 'ABT.: ' ABT                             +                     07240000
+          COL 120 'UHR' COL 124 SYSTIME                                 07250000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              07260000
+ *                                                                      07270000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                07280000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          07290000
+ *                                                                      07300000
+ NEWPAGE                                                                07310000
+ *======================================================================07320000
+ *      REPORTTEIL            - L A N D S H U T -                       07330000
+ *======================================================================07340000
+ *                                                                      07350000
+ REPORT LISTED PRINTER LISTED LINESIZE 165 SPACE 1 SKIP 0   +           07360006
+               NOADJUST NODATE                                          07370000
+ *                                                                      07380000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_HK_PROP D                07390000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             07400000
+ *                                                                      07410000
+ TITLE 1 'EASY.:  P3BF607'              +                               07420000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     07430000
+ TITLE 2 '**** B M W ****'                 +                            07440000
+          COL 53  'ZWWV-BELEG WERK LANDSHUT - HERKUNFTSWERK'  +         07450000
+          COL 120 'DAT' COL 124 SYSDATE                                 07460000
+ TITLE 3 'ABT.: ' ABT                             +                     07470000
+          COL 120 'UHR' COL 124 SYSTIME                                 07480000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              07490000
+ *                                                                      07500000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      07510000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  07520000
+        EW_MATKO                                                        07530000
+ *                                                                      07540000
+ *                                                                      07550000
+ *======================================================================07560000
+ *      REPORTTEIL            - L A N D S H U T -                       07570000
+ *======================================================================07580000
+ *                                                                      07590000
+ REPORT LISNRD PRINTER LISNRD LINESIZE 165 SPACE 1 SKIP 0   +           07600006
+               NOADJUST NODATE                                          07610000
+ *                                                                      07620000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_SNR                      07630000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             07640000
+ *                                                                      07650000
+ TITLE 1 'EASY.:  P3BF607'              +                               07660000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     07670000
+ TITLE 2 '**** B M W ****'                 +                            07680000
+          COL 53  'ZWWV-BELEG WERK LANDSHUT - HERKUNFTSWERK'  +         07690000
+          COL 120 'DAT' COL 124 SYSDATE                                 07700000
+ TITLE 3 'ABT.: ' ABT                             +                     07710000
+          COL 120 'UHR' COL 124 SYSTIME                                 07720000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              07730000
+ *                                                                      07740000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                07750000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          07760000
+ *                                                                      07770000
+ NEWPAGE                                                                07780000
+ *======================================================================07790000
+ *      REPORTTEIL            - R E G E N S B U R G -                   07800000
+ *======================================================================07810000
+ *                                                                      07820000
+ REPORT LISTEF PRINTER LISTEF LINESIZE 165 SPACE 1 SKIP 0   +           07830006
+               NOADJUST NODATE                                          07840000
+ *                                                                      07850000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_HK_PROP D                07860000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             07870000
+ *                                                                      07880000
+ TITLE 1 'EASY.:  P3BF607'              +                               07890000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     07900000
+ TITLE 2 '**** B M W ****'                 +                            07910000
+          COL 53  'ZWWV-BELEG WERK REGENSBURG - HERKUNFTSWERK' +        07920000
+          COL 120 'DAT' COL 124 SYSDATE                                 07930000
+ TITLE 3 'ABT.: ' ABT                             +                     07940000
+          COL 120 'UHR' COL 124 SYSTIME                                 07950000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              07960000
+ *                                                                      07970000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN -1 BF_SNR BF_AFO +      07980000
+        BF_SNR_BEN -1 BF_SNR_O -1 BF_MENGE -1 BF_HK_PROP -1 MATKO -1 +  07990000
+        EW_MATKO                                                        08000000
+ *                                                                      08010000
+ *                                                                      08020000
+ *======================================================================08030000
+ *      REPORTTEIL            - R E G E N S B U R G -                   08040000
+ *======================================================================08050000
+ *                                                                      08060000
+ REPORT LISNRF PRINTER LISNRF LINESIZE 165 SPACE 1 SKIP 0   +           08070006
+               NOADJUST NODATE                                          08080000
+ *                                                                      08090000
+ SEQUENCE BF_HW BF_BW BF_HABEN BF_SOLL BS_G BF_SNR                      08100000
+ CONTROL  BF_HW BF_BW BF_HABEN BF_SOLL BS_G                             08110000
+ *                                                                      08120000
+ TITLE 1 'EASY.:  P3BF607'              +                               08130000
+          COL 43  'H A U S T E I L E - B U C H U N G S S Y S T E M'     08140000
+ TITLE 2 '**** B M W ****'                 +                            08150000
+          COL 53  'ZWWV-BELEG WERK REGENSBURG - HERKUNFTSWERK' +        08160000
+          COL 120 'DAT' COL 124 SYSDATE                                 08170000
+ TITLE 3 'ABT.: ' ABT                             +                     08180000
+          COL 120 'UHR' COL 124 SYSTIME                                 08190000
+ TITLE 4  COL 51  'BUCHUNGSMONAT' ABR_TEXT                              08200000
+ *                                                                      08210000
+ LINE 1 BF_HW BF_BW BS_G BF_BA BF_SOLL BF_HABEN BF_SNR +                08220000
+        BF_AFO BF_SNR_BEN BF_SNR_O BF_MENGE BF_HK_PROP EINZELW          08230000
+ *                                                                      08240000
